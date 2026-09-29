@@ -47,7 +47,9 @@ function checkTargetCollision() {
   useEffect(() => {
     async function setupHandDetection() {
       try {
-        const vision = await FilesetResolver.forVisionTasks("/wasm");
+       const vision = await FilesetResolver.forVisionTasks(
+  `${import.meta.env.BASE_URL}wasm`
+);
 
         const detector = await HandLandmarker.createFromOptions(vision, {
           baseOptions: {
