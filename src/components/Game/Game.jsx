@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Target from "./Target";
+import Duck from "./Duck";
 import {
   FilesetResolver,
   HandLandmarker,
@@ -19,6 +20,12 @@ function Game() {
 
 const [score, setScore] = useState(0);
 
+const [duck, setDuck] = useState({
+  x: 30,
+  y: 40,
+});
+
+const [gameOver, setGameOver] = useState(false);
 function generateTarget() {
   const x = Math.random() * 80 + 10;
   const y = Math.random() * 70 + 15;
@@ -40,6 +47,30 @@ function checkTargetCollision() {
   if (distance < 8) {
     setScore((previousScore) => previousScore + 1);
     generateTarget();
+  }
+}
+function checkDuckCollision() {
+  if (!fingerPosition || gameOver) return;
+
+  const fingerX = 100 - fingerPosition.x * 100;
+  const fingerY = fingerPosition.y * 100;
+
+  const distance = Math.sqrt(
+    Math.pow(fingerX - duck.x, 2) +
+    Math.pow(fingerY - duck.y, 2)
+  );
+
+  console.log("🦆 Colisión:", {
+    fingerX,
+    fingerY,
+    duckX: duck.x,
+    duckY: duck.y,
+    distance,
+  });
+
+  if (distance < 15) {
+    console.log("💀 TOCASTE AL PATO");
+    setGameOver(true);
   }
 }
 
@@ -139,11 +170,12 @@ function checkTargetCollision() {
   
 
    // Detectar colisión con el objetivo
-  useEffect(() => {
-    if (!fingerPosition) return;
+ useEffect(() => {
+  if (!fingerPosition || gameOver) return;
 
-    checkTargetCollision();
-  }, [fingerPosition]);
+  checkTargetCollision();
+  checkDuckCollision();
+}, [fingerPosition, gameOver]);
 
   return (
     <div className="game">
@@ -163,6 +195,11 @@ function checkTargetCollision() {
   onHit={generateTarget}
 />
 
+<Duck
+  x={duck.x}
+  y={duck.y}
+/>
+
       {/* Puntero del dedo */}
       {fingerPosition && (
         <div
@@ -177,21 +214,45 @@ function checkTargetCollision() {
       )}
 
       {/* Interfaz */}
-     <div className="game-ui">
+<div className="game-ui">
   <h1>🦆 NO TOQUES AL PATO</h1>
 
   <div className="score">
     🎯 {score}
   </div>
 
-        <div className="status">
-          {handLandmarker
-            ? fingerPosition
-              ? "🟢 Dedo detectado"
-              : "🟡 Muestra tu mano"
-            : "🔵 Cargando detector..."}
-        </div>
+  <div className="status">
+    {handLandmarker
+      ? fingerPosition
+        ? "🟢 Dedo detectado"
+        : "🟡 Muestra tu mano"
+      : "🔵 Cargando detector..."}
+  </div>
+</div>
+
+{/* Game Over */}
+{gameOver && (
+  <div className="game-over">
+    <div className="game-over-box">
+      <div className="game-over-duck">💀🦆</div>
+
+      <h2>¡TOCASTE AL PATO!</h2>
+
+      <p>Tu puntuación</p>
+
+      <div className="final-score">
+        🎯 {score}
       </div>
+
+      <button
+        className="restart-button"
+        onClick={() => window.location.reload()}
+      >
+        🔄 JUGAR DE NUEVO
+      </button>
+    </div>
+  </div>
+)}
 
     </div>
   );
