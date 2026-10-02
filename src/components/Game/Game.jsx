@@ -75,14 +75,14 @@ function Game() {
         // Empieza relativamente rápido.
         // Cada 5 segundos aumenta la velocidad.
         const speed =
-          1.4 +
+          2.0 +
           Math.floor(gameTime / 5) * 0.25;
 
         // Límite para que no llegue a ser
         // completamente imposible.
         const finalSpeed = Math.min(
           speed,
-          4
+          4.5
         );
 
         let newX =
