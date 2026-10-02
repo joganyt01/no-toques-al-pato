@@ -23,7 +23,8 @@ const [score, setScore] = useState(0);
 const [duck, setDuck] = useState({
   x: 30,
   y: 40,
-  direction: 1,
+  directionX: 1,
+  directionY: 1,
 });
 
 const [gameOver, setGameOver] = useState(false);
@@ -76,30 +77,46 @@ function checkDuckCollision() {
 }
 
 // Movimiento del pato
-// Movimiento del pato
 useEffect(() => {
   if (gameOver) return;
 
-  let direction = 1;
-
   const duckMovement = setInterval(() => {
     setDuck((currentDuck) => {
-      let newX = currentDuck.x + direction * 2;
+      const speed = 1.2;
 
+      let newX = currentDuck.x + currentDuck.directionX * speed;
+      let newY = currentDuck.y + currentDuck.directionY * speed;
+
+      let newDirectionX = currentDuck.directionX;
+      let newDirectionY = currentDuck.directionY;
+
+      // Rebote horizontal
       if (newX >= 85) {
-        direction = -1;
         newX = 85;
+        newDirectionX = -1;
       }
 
       if (newX <= 15) {
-        direction = 1;
         newX = 15;
+        newDirectionX = 1;
+      }
+
+      // Rebote vertical
+      if (newY >= 80) {
+        newY = 80;
+        newDirectionY = -1;
+      }
+
+      if (newY <= 20) {
+        newY = 20;
+        newDirectionY = 1;
       }
 
       return {
-        ...currentDuck,
         x: newX,
-        direction,
+        y: newY,
+        directionX: newDirectionX,
+        directionY: newDirectionY,
       };
     });
   }, 50);
@@ -232,7 +249,7 @@ useEffect(() => {
 <Duck
   x={duck.x}
   y={duck.y}
-  direction={duck.direction}
+  direction={duck.directionX}
 />
 
       {/* Puntero del dedo */}
