@@ -270,6 +270,19 @@
     background 0.2s ease;
 }
 
+.duck {
+  transition: transform 0.15s ease;
+}
+
+.duck-left {
+  transform: translate(-50%, -50%) scaleX(-1);
+}
+
+.duck-right {
+  transform: translate(-50%, -50%) scaleX(1);
+}
+
+
 /* PC */
 @media (hover: hover) and (pointer: fine) {
   .restart-button:hover {

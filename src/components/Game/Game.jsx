@@ -23,6 +23,7 @@ const [score, setScore] = useState(0);
 const [duck, setDuck] = useState({
   x: 30,
   y: 40,
+  direction: 1,
 });
 
 const [gameOver, setGameOver] = useState(false);
@@ -74,6 +75,39 @@ function checkDuckCollision() {
   }
 }
 
+// Movimiento del pato
+// Movimiento del pato
+useEffect(() => {
+  if (gameOver) return;
+
+  let direction = 1;
+
+  const duckMovement = setInterval(() => {
+    setDuck((currentDuck) => {
+      let newX = currentDuck.x + direction * 2;
+
+      if (newX >= 85) {
+        direction = -1;
+        newX = 85;
+      }
+
+      if (newX <= 15) {
+        direction = 1;
+        newX = 15;
+      }
+
+      return {
+        ...currentDuck,
+        x: newX,
+        direction,
+      };
+    });
+  }, 50);
+
+  return () => {
+    clearInterval(duckMovement);
+  };
+}, [gameOver]);
   // Preparar MediaPipe
   useEffect(() => {
     async function setupHandDetection() {
@@ -198,6 +232,7 @@ function checkDuckCollision() {
 <Duck
   x={duck.x}
   y={duck.y}
+  direction={duck.direction}
 />
 
       {/* Puntero del dedo */}
