@@ -29,6 +29,8 @@ function Game() {
   const [handLandmarker, setHandLandmarker] = useState(null);
   const [fingerPosition, setFingerPosition] = useState(null);
 
+  const fingerPositionRef = useRef(null);
+
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
 
@@ -437,47 +439,62 @@ function Game() {
   // DETECTAR DEDO
   // =========================
 
-  useEffect(() => {
-    if (!handLandmarker) return;
+ useEffect(() => {
+  if (!handLandmarker) return;
 
-    let animationFrame;
+  let animationFrame;
+  let lastDetectionTime = 0;
 
-    function detectHand() {
-      if (!videoRef.current) return;
+  function detectHand(timestamp) {
+    if (!videoRef.current) return;
+
+    // Limitamos la detección aproximadamente a 30 FPS.
+    // Esto reduce bastante la carga en celulares.
+    if (timestamp - lastDetectionTime >= 33) {
+      lastDetectionTime = timestamp;
 
       if (videoRef.current.readyState >= 2) {
         const results =
           handLandmarker.detectForVideo(
             videoRef.current,
-            performance.now()
+            timestamp
           );
 
         if (results.landmarks.length > 0) {
           const indexFinger =
             results.landmarks[0][8];
 
-          setFingerPosition({
+          const newPosition = {
             x: indexFinger.x,
             y: indexFinger.y,
-          });
+          };
+
+          // Guardamos la posición inmediatamente
+          // sin provocar un render de React.
+          fingerPositionRef.current =
+            newPosition;
+
+          // Actualizamos solamente la posición
+          // visual que utiliza React.
+          setFingerPosition(newPosition);
         } else {
+          fingerPositionRef.current = null;
           setFingerPosition(null);
         }
       }
-
-      animationFrame =
-        requestAnimationFrame(
-          detectHand
-        );
     }
 
-    detectHand();
+    animationFrame =
+      requestAnimationFrame(detectHand);
+  }
 
-    return () => {
-      cancelAnimationFrame(animationFrame);
-    };
-  }, [handLandmarker]);
+  animationFrame =
+    requestAnimationFrame(detectHand);
 
+  return () => {
+    cancelAnimationFrame(animationFrame);
+  };
+}, [handLandmarker]);
   // =========================
   // GENERAR NUEVA POSICIÓN
   // =========================
