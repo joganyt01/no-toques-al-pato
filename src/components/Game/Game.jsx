@@ -75,25 +75,25 @@ function Game() {
         // Empieza relativamente rápido.
         // Cada 5 segundos aumenta la velocidad.
         const speed =
-          2.0 +
+          2.5 +
           Math.floor(gameTime / 5) * 0.25;
 
         // Límite para que no llegue a ser
         // completamente imposible.
         const finalSpeed = Math.min(
           speed,
-          4.5
+          5.0
         );
 
         let newX =
           currentDuck.x +
           currentDuck.directionX *
-            finalSpeed;
+          finalSpeed;
 
         let newY =
           currentDuck.y +
           currentDuck.directionY *
-            finalSpeed;
+          finalSpeed;
 
         let newDirectionX =
           currentDuck.directionX;
@@ -365,12 +365,12 @@ function Game() {
           currentTargets.map(
             (currentTarget) =>
               currentTarget.id ===
-              target.id
+                target.id
                 ? {
-                    ...currentTarget,
-                    x: newPosition.x,
-                    y: newPosition.y,
-                  }
+                  ...currentTarget,
+                  x: newPosition.x,
+                  y: newPosition.y,
+                }
                 : currentTarget
           )
         );
@@ -450,12 +450,12 @@ function Game() {
                 currentTargets.map(
                   (currentTarget) =>
                     currentTarget.id ===
-                    target.id
+                      target.id
                       ? {
-                          ...currentTarget,
-                          x: newPosition.x,
-                          y: newPosition.y,
-                        }
+                        ...currentTarget,
+                        x: newPosition.x,
+                        y: newPosition.y,
+                      }
                       : currentTarget
                 )
             );
@@ -481,13 +481,11 @@ function Game() {
         <div
           className="finger-pointer"
           style={{
-            left: `${
-              100 -
+            left: `${100 -
               fingerPosition.x * 100
-            }%`,
-            top: `${
-              fingerPosition.y * 100
-            }%`,
+              }%`,
+            top: `${fingerPosition.y * 100
+              }%`,
           }}
         >
           👆
@@ -500,7 +498,7 @@ function Game() {
 
       <div className="game-ui">
 
-        <h1>🦆 TOCA AL PATO</h1>
+        <h1>🦆 SI TOCAS AL PATO ERES GAY</h1>
 
         <div className="score">
           🎯 {score}
@@ -521,21 +519,18 @@ function Game() {
       ========================= */}
 
       {gameOver && (
-        <div className="game-over">
+        <div className="game-over screen-flash">
 
           <div className="game-over-box">
+            <div className="game-over-duck">🦆</div>
 
-            <div className="game-over-duck">
-              💀🦆
+            <h2>¡AYY, SEVERA LOCA!</h2>
+
+            <div className="crazy-gif">
+              <img src={`${import.meta.env.BASE_URL}loca.gif`} alt="Loca" />
             </div>
 
-            <h2>
-              ¡TOCASTE AL PATO!
-            </h2>
-
-            <p>
-              Tu puntuación
-            </p>
+            <p>Puntaje final</p>
 
             <div className="final-score">
               🎯 {score}
