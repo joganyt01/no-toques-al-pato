@@ -10,6 +10,22 @@ import "./Game.css";
 function Game() {
   const videoRef = useRef(null);
 
+  // =========================
+  // AUDIOS
+  // =========================
+
+  const targetSoundRef = useRef(null);
+  const duckSoundRef = useRef(null);
+  const songRef = useRef(null);
+
+  const gameOverSoundPlayedRef = useRef(false);
+  const songTimeoutRef = useRef(null);
+  const songFadeIntervalRef = useRef(null);
+
+  // =========================
+  // ESTADOS
+  // =========================
+
   const [handLandmarker, setHandLandmarker] = useState(null);
   const [fingerPosition, setFingerPosition] = useState(null);
 
@@ -18,6 +34,202 @@ function Game() {
 
   // Tiempo que lleva viva la partida
   const [gameTime, setGameTime] = useState(0);
+
+  // =========================
+  // PREPARAR AUDIOS
+  // =========================
+
+  useEffect(() => {
+    targetSoundRef.current = new Audio(
+      `${import.meta.env.BASE_URL}objetivos.mp3`
+    );
+
+    duckSoundRef.current = new Audio(
+      `${import.meta.env.BASE_URL}pato.mp3`
+    );
+
+    songRef.current = new Audio(
+      `${import.meta.env.BASE_URL}severa.mp3`
+    );
+
+    // La canción solamente se reproduce cuando se pierde.
+    songRef.current.loop = true;
+
+    // Comienza en silencio para hacer fade-in.
+    songRef.current.volume = 0;
+
+    return () => {
+      if (songTimeoutRef.current) {
+        clearTimeout(songTimeoutRef.current);
+      }
+
+      if (songFadeIntervalRef.current) {
+        clearInterval(songFadeIntervalRef.current);
+      }
+
+      targetSoundRef.current?.pause();
+      duckSoundRef.current?.pause();
+      songRef.current?.pause();
+
+      if (songRef.current) {
+        songRef.current.currentTime = 0;
+      }
+    };
+  }, []);
+
+  // =========================
+  // SONIDO OBJETIVO
+  // =========================
+
+  function playTargetSound() {
+    const sound = targetSoundRef.current;
+
+    if (!sound) return;
+
+    sound.currentTime = 0;
+
+    sound.play().catch((error) => {
+      console.log(
+        "No se pudo reproducir el sonido del objetivo:",
+        error
+      );
+    });
+  }
+
+  // =========================
+  // GAME OVER + SONIDOS
+  // =========================
+
+  function playGameOverSounds() {
+    // Evitar que se ejecute más de una vez
+    // durante la misma derrota.
+    if (gameOverSoundPlayedRef.current) {
+      return;
+    }
+
+    gameOverSoundPlayedRef.current = true;
+
+    // =========================
+    // 🦆 SONIDO DEL PATO
+    // =========================
+
+    const duckSound = duckSoundRef.current;
+
+    if (duckSound) {
+      duckSound.currentTime = 0;
+
+      duckSound.play().catch((error) => {
+        console.log(
+          "No se pudo reproducir el sonido del pato:",
+          error
+        );
+      });
+    }
+
+    // =========================
+    // 🎵 CANCIÓN
+    // =========================
+
+    songTimeoutRef.current = setTimeout(() => {
+      const song = songRef.current;
+
+      if (!song) return;
+
+      // Asegurarnos de empezar desde el principio.
+      song.pause();
+      song.currentTime = 0;
+      song.volume = 0;
+
+      song.play().catch((error) => {
+        console.log(
+          "No se pudo reproducir la canción:",
+          error
+        );
+      });
+
+      // =========================
+      // FADE IN
+      // =========================
+
+      let volume = 0;
+
+      songFadeIntervalRef.current =
+        setInterval(() => {
+          volume += 0.05;
+
+          if (volume >= 1) {
+            volume = 1;
+
+            clearInterval(
+              songFadeIntervalRef.current
+            );
+
+            songFadeIntervalRef.current = null;
+          }
+
+          song.volume = volume;
+        }, 100);
+
+    }, 500);
+  }
+
+  // =========================
+  // DETENER CANCIÓN
+  // =========================
+
+  function stopGameOverMusic() {
+    if (songTimeoutRef.current) {
+      clearTimeout(songTimeoutRef.current);
+
+      songTimeoutRef.current = null;
+    }
+
+    if (songFadeIntervalRef.current) {
+      clearInterval(
+        songFadeIntervalRef.current
+      );
+
+      songFadeIntervalRef.current = null;
+    }
+
+    const song = songRef.current;
+
+    if (song) {
+      song.pause();
+      song.currentTime = 0;
+      song.volume = 0;
+    }
+  }
+
+  // =========================
+  // REINICIAR PARTIDA
+  // =========================
+
+  function restartGame() {
+    stopGameOverMusic();
+
+    gameOverSoundPlayedRef.current = false;
+
+    setScore(0);
+    setGameTime(0);
+    setGameOver(false);
+    setFingerPosition(null);
+
+    setTargets([
+      { id: 1, x: 20, y: 25 },
+      { id: 2, x: 75, y: 25 },
+      { id: 3, x: 25, y: 70 },
+      { id: 4, x: 75, y: 70 },
+      { id: 5, x: 50, y: 50 },
+    ]);
+
+    setDuck({
+      x: 30,
+      y: 40,
+      directionX: 1,
+      directionY: 1,
+    });
+  }
 
   // =========================
   // OBSTÁCULOS
@@ -50,7 +262,10 @@ function Game() {
     if (gameOver) return;
 
     const timer = setInterval(() => {
-      setGameTime((previousTime) => previousTime + 1);
+      setGameTime(
+        (previousTime) =>
+          previousTime + 1
+      );
     }, 1000);
 
     return () => {
@@ -72,14 +287,10 @@ function Game() {
         // VELOCIDAD PROGRESIVA
         // =========================
 
-        // Empieza relativamente rápido.
-        // Cada 5 segundos aumenta la velocidad.
         const speed =
           2.5 +
           Math.floor(gameTime / 5) * 0.25;
 
-        // Límite para que no llegue a ser
-        // completamente imposible.
         const finalSpeed = Math.min(
           speed,
           5.0
@@ -215,7 +426,9 @@ function Game() {
       if (videoRef.current?.srcObject) {
         videoRef.current.srcObject
           .getTracks()
-          .forEach((track) => track.stop());
+          .forEach((track) =>
+            track.stop()
+          );
       }
     };
   }, []);
@@ -253,7 +466,9 @@ function Game() {
       }
 
       animationFrame =
-        requestAnimationFrame(detectHand);
+        requestAnimationFrame(
+          detectHand
+        );
     }
 
     detectHand();
@@ -276,22 +491,35 @@ function Game() {
     let validPosition = false;
 
     while (!validPosition) {
-      newX = Math.random() * 70 + 15;
-      newY = Math.random() * 55 + 22;
+      newX =
+        Math.random() * 70 + 15;
+
+      newY =
+        Math.random() * 55 + 22;
 
       validPosition = true;
 
       // Evitar que aparezca demasiado cerca
       // de otro objetivo.
       for (const target of targets) {
-        if (target.id === currentTarget.id) {
+        if (
+          target.id ===
+          currentTarget.id
+        ) {
           continue;
         }
 
-        const distance = Math.sqrt(
-          Math.pow(newX - target.x, 2) +
-          Math.pow(newY - target.y, 2)
-        );
+        const distance =
+          Math.sqrt(
+            Math.pow(
+              newX - target.x,
+              2
+            ) +
+            Math.pow(
+              newY - target.y,
+              2
+            )
+          );
 
         if (distance < 14) {
           validPosition = false;
@@ -302,8 +530,14 @@ function Game() {
       // Evitar que aparezca encima del pato.
       const distanceToDuck =
         Math.sqrt(
-          Math.pow(newX - duck.x, 2) +
-          Math.pow(newY - duck.y, 2)
+          Math.pow(
+            newX - duck.x,
+            2
+          ) +
+          Math.pow(
+            newY - duck.y,
+            2
+          )
         );
 
       if (distanceToDuck < 15) {
@@ -318,14 +552,69 @@ function Game() {
   }
 
   // =========================
+  // ACERTAR OBJETIVO
+  // =========================
+
+  function hitTarget(target) {
+    // Sonido inmediatamente.
+    playTargetSound();
+
+    // Sumar punto.
+    setScore(
+      (previousScore) =>
+        previousScore + 1
+    );
+
+    // Crear nueva posición.
+    const newPosition =
+      generateNewTargetPosition(
+        target
+      );
+
+    setTargets(
+      (currentTargets) =>
+        currentTargets.map(
+          (currentTarget) =>
+            currentTarget.id ===
+              target.id
+              ? {
+                ...currentTarget,
+                x: newPosition.x,
+                y: newPosition.y,
+              }
+              : currentTarget
+        )
+    );
+  }
+
+  // =========================
+  // PERDER
+  // =========================
+
+  function loseGame() {
+    if (gameOver) return;
+
+    console.log(
+      "💀 TOCASTE AL PATO"
+    );
+
+    setGameOver(true);
+
+    playGameOverSounds();
+  }
+
+  // =========================
   // COLISIONES
   // =========================
 
   useEffect(() => {
-    if (!fingerPosition || gameOver) return;
+    if (!fingerPosition || gameOver) {
+      return;
+    }
 
     const fingerX =
-      100 - fingerPosition.x * 100;
+      100 -
+      fingerPosition.x * 100;
 
     const fingerY =
       fingerPosition.y * 100;
@@ -347,34 +636,10 @@ function Game() {
           )
         );
 
-      if (distanceToTarget < 8) {
-
-        // Sumar punto
-        setScore(
-          (previousScore) =>
-            previousScore + 1
-        );
-
-        // Crear nuevo objetivo
-        const newPosition =
-          generateNewTargetPosition(
-            target
-          );
-
-        setTargets((currentTargets) =>
-          currentTargets.map(
-            (currentTarget) =>
-              currentTarget.id ===
-                target.id
-                ? {
-                  ...currentTarget,
-                  x: newPosition.x,
-                  y: newPosition.y,
-                }
-                : currentTarget
-          )
-        );
-
+      if (
+        distanceToTarget < 8
+      ) {
+        hitTarget(target);
         return;
       }
     }
@@ -395,12 +660,10 @@ function Game() {
         )
       );
 
-    if (distanceToDuck < 15) {
-      console.log(
-        "💀 TOCASTE AL PATO"
-      );
-
-      setGameOver(true);
+    if (
+      distanceToDuck < 15
+    ) {
+      loseGame();
     }
   }, [
     fingerPosition,
@@ -434,32 +697,9 @@ function Game() {
           key={target.id}
           x={target.x}
           y={target.y}
-          onHit={() => {
-            setScore(
-              (previousScore) =>
-                previousScore + 1
-            );
-
-            const newPosition =
-              generateNewTargetPosition(
-                target
-              );
-
-            setTargets(
-              (currentTargets) =>
-                currentTargets.map(
-                  (currentTarget) =>
-                    currentTarget.id ===
-                      target.id
-                      ? {
-                        ...currentTarget,
-                        x: newPosition.x,
-                        y: newPosition.y,
-                      }
-                      : currentTarget
-                )
-            );
-          }}
+          onHit={() =>
+            hitTarget(target)
+          }
         />
       ))}
 
@@ -481,11 +721,15 @@ function Game() {
         <div
           className="finger-pointer"
           style={{
-            left: `${100 -
-              fingerPosition.x * 100
-              }%`,
-            top: `${fingerPosition.y * 100
-              }%`,
+            left: `${
+              100 -
+              fingerPosition.x *
+                100
+            }%`,
+            top: `${
+              fingerPosition.y *
+              100
+            }%`,
           }}
         >
           👆
@@ -498,7 +742,10 @@ function Game() {
 
       <div className="game-ui">
 
-        <h1>🦆 SI TOCAS AL PATO ERES GAY</h1>
+        <h1>
+          🦆 SI TOCAS AL PATO
+          ERES GAY
+        </h1>
 
         <div className="score">
           🎯 {score}
@@ -522,15 +769,25 @@ function Game() {
         <div className="game-over screen-flash">
 
           <div className="game-over-box">
-            <div className="game-over-duck">🦆</div>
 
-            <h2>¡AYY, SEVERA LOCA!</h2>
-
-            <div className="crazy-gif">
-              <img src={`${import.meta.env.BASE_URL}loca.gif`} alt="Loca" />
+            <div className="game-over-duck">
+              🦆
             </div>
 
-            <p>Puntaje final</p>
+            <h2>
+              ¡AYY, SEVERA LOCA!
+            </h2>
+
+            <div className="crazy-gif">
+              <img
+                src={`${import.meta.env.BASE_URL}loca.gif`}
+                alt="Loca"
+              />
+            </div>
+
+            <p>
+              Puntaje final
+            </p>
 
             <div className="final-score">
               🎯 {score}
@@ -538,9 +795,7 @@ function Game() {
 
             <button
               className="restart-button"
-              onClick={() =>
-                window.location.reload()
-              }
+              onClick={restartGame}
             >
               🔄 JUGAR DE NUEVO
             </button>
