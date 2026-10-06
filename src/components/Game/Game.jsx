@@ -438,8 +438,7 @@ function Game() {
   // =========================
   // DETECTAR DEDO
   // =========================
-
- useEffect(() => {
+useEffect(() => {
   if (!handLandmarker) return;
 
   let animationFrame;
@@ -448,8 +447,7 @@ function Game() {
   function detectHand(timestamp) {
     if (!videoRef.current) return;
 
-    // Limitamos la detección aproximadamente a 30 FPS.
-    // Esto reduce bastante la carga en celulares.
+    // MediaPipe trabaja aproximadamente a 30 FPS
     if (timestamp - lastDetectionTime >= 33) {
       lastDetectionTime = timestamp;
 
@@ -464,19 +462,22 @@ function Game() {
           const indexFinger =
             results.landmarks[0][8];
 
-          const newPosition = {
-            x: indexFinger.x,
-            y: indexFinger.y,
+          const x = indexFinger.x;
+          const y = indexFinger.y;
+
+          // Guardamos la posición más reciente
+          // sin depender de React.
+          fingerPositionRef.current = {
+            x,
+            y,
           };
 
-          // Guardamos la posición inmediatamente
-          // sin provocar un render de React.
-          fingerPositionRef.current =
-            newPosition;
-
-          // Actualizamos solamente la posición
-          // visual que utiliza React.
-          setFingerPosition(newPosition);
+          // Solo actualizamos React para mostrar
+          // el puntero visual.
+          setFingerPosition({
+            x,
+            y,
+          });
         } else {
           fingerPositionRef.current = null;
           setFingerPosition(null);
@@ -623,72 +624,62 @@ function Game() {
   // =========================
   // COLISIONES
   // =========================
+useEffect(() => {
+  if (gameOver) {
+    return;
+  }
 
-  useEffect(() => {
-    if (!fingerPosition || gameOver) {
-      return;
-    }
+  const finger = fingerPositionRef.current;
 
-    const fingerX =
-      100 -
-      fingerPosition.x * 100;
+  if (!finger) {
+    return;
+  }
 
-    const fingerY =
-      fingerPosition.y * 100;
+  const fingerX =
+    100 - finger.x * 100;
 
-    // =========================
-    // 🎯 OBJETIVOS
-    // =========================
+  const fingerY =
+    finger.y * 100;
 
-    for (const target of targets) {
-      const distanceToTarget =
-        Math.sqrt(
-          Math.pow(
-            fingerX - target.x,
-            2
-          ) +
-          Math.pow(
-            fingerY - target.y,
-            2
-          )
-        );
-
-      if (
-        distanceToTarget < 8
-      ) {
-        hitTarget(target);
-        return;
-      }
-    }
-
-    // =========================
-    // 🦆 PATO
-    // =========================
-
-    const distanceToDuck =
+  for (const target of targets) {
+    const distanceToTarget =
       Math.sqrt(
         Math.pow(
-          fingerX - duck.x,
+          fingerX - target.x,
           2
         ) +
         Math.pow(
-          fingerY - duck.y,
+          fingerY - target.y,
           2
         )
       );
 
-    if (
-      distanceToDuck < 15
-    ) {
-      loseGame();
+    if (distanceToTarget < 8) {
+      hitTarget(target);
+      return;
     }
-  }, [
-    fingerPosition,
-    duck,
-    targets,
-    gameOver,
-  ]);
+  }
 
+  const distanceToDuck =
+    Math.sqrt(
+      Math.pow(
+        fingerX - duck.x,
+        2
+      ) +
+      Math.pow(
+        fingerY - duck.y,
+        2
+      )
+    );
+
+  if (distanceToDuck < 15) {
+    loseGame();
+  }
+}, [
+  duck,
+  targets,
+  gameOver,
+]);
   // =========================
   // INTERFAZ
   // =========================
