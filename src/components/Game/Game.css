@@ -106,23 +106,21 @@
 }
 
 .game-over-box {
-  width: min(90vw, 420px);
-  box-sizing: border-box;
+  position: relative;
+  z-index: 25;
 
-  padding: 32px 24px 28px;
-
-  border-radius: 24px;
-
-  background: rgba(20, 20, 20, 0.97);
-
-  color: white;
-  text-align: center;
+  width: min(88vw, 430px);
 
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
 
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  padding: 20px 18px;
+
+  text-align: center;
+
+  box-sizing: border-box;
 }
 
 .game-over-duck {
@@ -138,25 +136,30 @@
 }
 
 .game-over-box h2 {
-  width: 100%;
-  margin: 0;
+  margin: 0 0 6px;
 
-  font-size: clamp(24px, 7vw, 38px);
-  line-height: 1.15;
+  font-size: clamp(1.8rem, 7vw, 3rem);
+  font-weight: 900;
+
+  line-height: 1.05;
 
   text-align: center;
+
+  text-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.9),
+    0 0 20px rgba(255, 255, 255, 0.25);
 }
 
 .game-over-box p {
-  width: 100%;
-  margin: 22px 0 6px;
+  margin: 0 0 8px;
 
-  font-size: 18px;
-  line-height: 1.2;
+  font-size: clamp(0.9rem, 3.5vw, 1.2rem);
+  font-weight: 800;
 
   text-align: center;
 
-  opacity: 0.75;
+  text-shadow:
+    0 3px 8px rgba(0, 0, 0, 0.9);
 }
 
 .final-score {
@@ -285,10 +288,10 @@
 .crazy-gif {
   position: relative;
 
-  width: min(75vw, 280px);
-  height: min(30vw, 180px);
+  width: min(48vw, 180px);
+  height: min(28vw, 105px);
 
-  margin: 8px 0 8px;
+  margin: 6px 0 10px;
 
   display: flex;
   align-items: center;
@@ -296,9 +299,22 @@
 
   overflow: hidden;
 
-  border-radius: 18px;
+  border-radius: 14px;
 
-  animation: crazyGifAppear 4.5s ease-out both;
+  animation: crazyGifAppear 1.5s ease-out both;
+}
+
+.crazy-gif img {
+  width: 100%;
+  height: 100%;
+
+  object-fit: contain;
+
+  display: block;
+
+  border-radius: 14px;
+
+  animation: crazyGifFlash 1.5s ease-out both;
 }
 
 /* GIF */

@@ -775,42 +775,34 @@ useEffect(() => {
 
       {gameOver && (
         <div className="game-over screen-flash">
+  <div className="game-over-box">
 
-          <div className="game-over-box">
+    <h2>¡AYY, SEVERA LOCA!</h2>
 
-            <div className="game-over-duck">
-              🦆
-            </div>
+    <p>
+      ¡TOCASTE AL PATO!
+    </p>
 
-            <h2>
-              ¡AYY, SEVERA LOCA!
-            </h2>
+    <div className="final-score">
+      PUNTAJE: {score}
+    </div>
 
-            <div className="crazy-gif">
-              <img
-                src={`${import.meta.env.BASE_URL}loca.gif`}
-                alt="Loca"
-              />
-            </div>
+    <div className="crazy-gif">
+      <img
+        src={`${import.meta.env.BASE_URL}loca.gif`}
+        alt="Loca"
+      />
+    </div>
 
-            <p>
-              Puntaje final
-            </p>
+    <button
+      className="restart-button"
+      onClick={restartGame}
+    >
+      🔄 JUGAR DE NUEVO
+    </button>
 
-            <div className="final-score">
-              🎯 {score}
-            </div>
-
-            <button
-              className="restart-button"
-              onClick={restartGame}
-            >
-              🔄 JUGAR DE NUEVO
-            </button>
-
-          </div>
-
-        </div>
+  </div>
+</div>
       )}
 
     </div>
