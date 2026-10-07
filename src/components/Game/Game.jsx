@@ -9,6 +9,7 @@ import "./Game.css";
 
 function Game() {
   const videoRef = useRef(null);
+  const duckRef = useRef(null);
 
   // =========================
   // AUDIOS
@@ -23,19 +24,82 @@ function Game() {
   const songFadeIntervalRef = useRef(null);
 
   // =========================
+  // MEDIAPIPE
+  // =========================
+
+  const [handLandmarker, setHandLandmarker] =
+    useState(null);
+
+  const handLandmarkerRef = useRef(null);
+
+  // Posición real del dedo.
+  // NO provoca renders.
+  const fingerPositionRef = useRef(null);
+
+  // Posición visual del dedo.
+  const fingerPointerRef = useRef(null);
+
+  // =========================
   // ESTADOS
   // =========================
 
-  const [handLandmarker, setHandLandmarker] = useState(null);
-  const [fingerPosition, setFingerPosition] = useState(null);
-
-  const fingerPositionRef = useRef(null);
+  const [fingerDetected, setFingerDetected] =
+    useState(false);
 
   const [score, setScore] = useState(0);
-  const [gameOver, setGameOver] = useState(false);
 
-  // Tiempo que lleva viva la partida
-  const [gameTime, setGameTime] = useState(0);
+  const [gameOver, setGameOver] =
+    useState(false);
+
+  const [gameTime, setGameTime] =
+    useState(0);
+
+  // =========================
+  // OBJETIVOS
+  // =========================
+
+  const [targets, setTargets] = useState([
+    { id: 1, x: 20, y: 25 },
+    { id: 2, x: 75, y: 25 },
+    { id: 3, x: 25, y: 70 },
+    { id: 4, x: 75, y: 70 },
+    { id: 5, x: 50, y: 50 },
+  ]);
+
+  const targetsRef = useRef(targets);
+
+  useEffect(() => {
+    targetsRef.current = targets;
+  }, [targets]);
+
+  // =========================
+  // PATO
+  // =========================
+
+  const [duck, setDuck] = useState({
+    x: 30,
+    y: 40,
+    directionX: 1,
+    directionY: 1,
+  });
+
+  const duckStateRef = useRef({
+    x: 30,
+    y: 40,
+    directionX: 1,
+    directionY: 1,
+  });
+
+  const gameOverRef = useRef(false);
+  const gameTimeRef = useRef(0);
+
+  useEffect(() => {
+    gameOverRef.current = gameOver;
+  }, [gameOver]);
+
+  useEffect(() => {
+    gameTimeRef.current = gameTime;
+  }, [gameTime]);
 
   // =========================
   // PREPARAR AUDIOS
@@ -54,10 +118,7 @@ function Game() {
       `${import.meta.env.BASE_URL}severa.mp3`
     );
 
-    // La canción solamente se reproduce cuando se pierde.
     songRef.current.loop = true;
-
-    // Comienza en silencio para hacer fade-in.
     songRef.current.volume = 0;
 
     return () => {
@@ -66,7 +127,9 @@ function Game() {
       }
 
       if (songFadeIntervalRef.current) {
-        clearInterval(songFadeIntervalRef.current);
+        clearInterval(
+          songFadeIntervalRef.current
+        );
       }
 
       targetSoundRef.current?.pause();
@@ -84,7 +147,8 @@ function Game() {
   // =========================
 
   function playTargetSound() {
-    const sound = targetSoundRef.current;
+    const sound =
+      targetSoundRef.current;
 
     if (!sound) return;
 
@@ -103,19 +167,17 @@ function Game() {
   // =========================
 
   function playGameOverSounds() {
-    // Evitar que se ejecute más de una vez
-    // durante la misma derrota.
-    if (gameOverSoundPlayedRef.current) {
+    if (
+      gameOverSoundPlayedRef.current
+    ) {
       return;
     }
 
-    gameOverSoundPlayedRef.current = true;
+    gameOverSoundPlayedRef.current =
+      true;
 
-    // =========================
-    // 🦆 SONIDO DEL PATO
-    // =========================
-
-    const duckSound = duckSoundRef.current;
+    const duckSound =
+      duckSoundRef.current;
 
     if (duckSound) {
       duckSound.currentTime = 0;
@@ -128,51 +190,43 @@ function Game() {
       });
     }
 
-    // =========================
-    // 🎵 CANCIÓN
-    // =========================
+    songTimeoutRef.current =
+      setTimeout(() => {
+        const song = songRef.current;
 
-    songTimeoutRef.current = setTimeout(() => {
-      const song = songRef.current;
+        if (!song) return;
 
-      if (!song) return;
+        song.pause();
+        song.currentTime = 0;
+        song.volume = 0;
 
-      // Asegurarnos de empezar desde el principio.
-      song.pause();
-      song.currentTime = 0;
-      song.volume = 0;
+        song.play().catch((error) => {
+          console.log(
+            "No se pudo reproducir la canción:",
+            error
+          );
+        });
 
-      song.play().catch((error) => {
-        console.log(
-          "No se pudo reproducir la canción:",
-          error
-        );
-      });
+        let volume = 0;
 
-      // =========================
-      // FADE IN
-      // =========================
+        songFadeIntervalRef.current =
+          setInterval(() => {
+            volume += 0.05;
 
-      let volume = 0;
+            if (volume >= 1) {
+              volume = 1;
 
-      songFadeIntervalRef.current =
-        setInterval(() => {
-          volume += 0.05;
+              clearInterval(
+                songFadeIntervalRef.current
+              );
 
-          if (volume >= 1) {
-            volume = 1;
+              songFadeIntervalRef.current =
+                null;
+            }
 
-            clearInterval(
-              songFadeIntervalRef.current
-            );
-
-            songFadeIntervalRef.current = null;
-          }
-
-          song.volume = volume;
-        }, 100);
-
-    }, 500);
+            song.volume = volume;
+          }, 100);
+      }, 500);
   }
 
   // =========================
@@ -181,7 +235,9 @@ function Game() {
 
   function stopGameOverMusic() {
     if (songTimeoutRef.current) {
-      clearTimeout(songTimeoutRef.current);
+      clearTimeout(
+        songTimeoutRef.current
+      );
 
       songTimeoutRef.current = null;
     }
@@ -204,57 +260,58 @@ function Game() {
   }
 
   // =========================
-  // REINICIAR PARTIDA
+  // REINICIAR
   // =========================
 
   function restartGame() {
     stopGameOverMusic();
 
-    gameOverSoundPlayedRef.current = false;
+    gameOverSoundPlayedRef.current =
+      false;
+
+    gameOverRef.current = false;
+
+    fingerPositionRef.current = null;
+
+    setFingerDetected(false);
 
     setScore(0);
     setGameTime(0);
     setGameOver(false);
-    setFingerPosition(null);
 
-    setTargets([
+    const initialTargets = [
       { id: 1, x: 20, y: 25 },
       { id: 2, x: 75, y: 25 },
       { id: 3, x: 25, y: 70 },
       { id: 4, x: 75, y: 70 },
       { id: 5, x: 50, y: 50 },
-    ]);
+    ];
 
-    setDuck({
+    targetsRef.current =
+      initialTargets;
+
+    setTargets(initialTargets);
+
+    const initialDuck = {
       x: 30,
       y: 40,
       directionX: 1,
       directionY: 1,
-    });
+    };
+
+    duckStateRef.current =
+      initialDuck;
+
+    setDuck(initialDuck);
+
+    if (duckRef.current) {
+      duckRef.current.style.left =
+        `${initialDuck.x}%`;
+
+      duckRef.current.style.top =
+        `${initialDuck.y}%`;
+    }
   }
-
-  // =========================
-  // OBSTÁCULOS
-  // =========================
-
-  const [targets, setTargets] = useState([
-    { id: 1, x: 20, y: 25 },
-    { id: 2, x: 75, y: 25 },
-    { id: 3, x: 25, y: 70 },
-    { id: 4, x: 75, y: 70 },
-    { id: 5, x: 50, y: 50 },
-  ]);
-
-  // =========================
-  // PATO
-  // =========================
-
-  const [duck, setDuck] = useState({
-    x: 30,
-    y: 40,
-    directionX: 1,
-    directionY: 1,
-  });
 
   // =========================
   // CRONÓMETRO
@@ -276,91 +333,12 @@ function Game() {
   }, [gameOver]);
 
   // =========================
-  // MOVIMIENTO DEL PATO
-  // =========================
-
-  useEffect(() => {
-    if (gameOver) return;
-
-    const duckMovement = setInterval(() => {
-      setDuck((currentDuck) => {
-
-        // =========================
-        // VELOCIDAD PROGRESIVA
-        // =========================
-
-        const speed =
-          2.5 +
-          Math.floor(gameTime / 5) * 0.25;
-
-        const finalSpeed = Math.min(
-          speed,
-          5.0
-        );
-
-        let newX =
-          currentDuck.x +
-          currentDuck.directionX *
-          finalSpeed;
-
-        let newY =
-          currentDuck.y +
-          currentDuck.directionY *
-          finalSpeed;
-
-        let newDirectionX =
-          currentDuck.directionX;
-
-        let newDirectionY =
-          currentDuck.directionY;
-
-        // =========================
-        // REBOTE HORIZONTAL
-        // =========================
-
-        if (newX >= 85) {
-          newX = 85;
-          newDirectionX = -1;
-        }
-
-        if (newX <= 15) {
-          newX = 15;
-          newDirectionX = 1;
-        }
-
-        // =========================
-        // REBOTE VERTICAL
-        // =========================
-
-        if (newY >= 80) {
-          newY = 80;
-          newDirectionY = -1;
-        }
-
-        if (newY <= 20) {
-          newY = 20;
-          newDirectionY = 1;
-        }
-
-        return {
-          x: newX,
-          y: newY,
-          directionX: newDirectionX,
-          directionY: newDirectionY,
-        };
-      });
-    }, 50);
-
-    return () => {
-      clearInterval(duckMovement);
-    };
-  }, [gameOver, gameTime]);
-
-  // =========================
   // PREPARAR MEDIAPIPE
   // =========================
 
   useEffect(() => {
+    let cancelled = false;
+
     async function setupHandDetection() {
       try {
         const vision =
@@ -377,10 +355,20 @@ function Game() {
                   "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
                 delegate: "GPU",
               },
+
               runningMode: "VIDEO",
+
               numHands: 1,
             }
           );
+
+        if (cancelled) {
+          detector.close();
+          return;
+        }
+
+        handLandmarkerRef.current =
+          detector;
 
         setHandLandmarker(detector);
 
@@ -396,24 +384,58 @@ function Game() {
     }
 
     setupHandDetection();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // =========================
-  // ACTIVAR CÁMARA
+  // CÁMARA
   // =========================
 
   useEffect(() => {
+    let stream = null;
+
     async function startCamera() {
       try {
-        const stream =
-          await navigator.mediaDevices.getUserMedia({
-            video: {
-              facingMode: "user",
-            },
-            audio: false,
-          });
+        stream =
+          await navigator.mediaDevices.getUserMedia(
+            {
+              video: {
+                facingMode: "user",
 
-        videoRef.current.srcObject = stream;
+                // IMPORTANTE:
+                // reducimos la resolución que recibe
+                // MediaPipe para mejorar rendimiento.
+                width: {
+                  ideal: 640,
+                  max: 640,
+                },
+
+                height: {
+                  ideal: 480,
+                  max: 480,
+                },
+
+                frameRate: {
+                  ideal: 30,
+                  max: 30,
+                },
+              },
+
+              audio: false,
+            }
+          );
+
+        if (videoRef.current) {
+          videoRef.current.srcObject =
+            stream;
+
+          videoRef.current.play().catch(
+            () => {}
+          );
+        }
       } catch (error) {
         console.error(
           "❌ Error al acceder a la cámara:",
@@ -425,8 +447,8 @@ function Game() {
     startCamera();
 
     return () => {
-      if (videoRef.current?.srcObject) {
-        videoRef.current.srcObject
+      if (stream) {
+        stream
           .getTracks()
           .forEach((track) =>
             track.stop()
@@ -436,68 +458,111 @@ function Game() {
   }, []);
 
   // =========================
-  // DETECTAR DEDO
+  // DETECTAR MANO
   // =========================
-useEffect(() => {
-  if (!handLandmarker) return;
 
-  let animationFrame;
-  let lastDetectionTime = 0;
+  useEffect(() => {
+    if (!handLandmarker) return;
 
-  function detectHand(timestamp) {
-    if (!videoRef.current) return;
+    let animationFrame;
 
-    // MediaPipe trabaja aproximadamente a 30 FPS
-    if (timestamp - lastDetectionTime >= 33) {
-      lastDetectionTime = timestamp;
+    let lastDetectionTime = 0;
 
-      if (videoRef.current.readyState >= 2) {
-        const results =
-          handLandmarker.detectForVideo(
-            videoRef.current,
-            timestamp
+    // Aproximadamente 24 FPS.
+    // Dejamos espacio al navegador
+    // para dibujar el juego.
+    const detectionInterval = 42;
+
+    function detectHand(timestamp) {
+      if (
+        !videoRef.current ||
+        gameOverRef.current
+      ) {
+        animationFrame =
+          requestAnimationFrame(
+            detectHand
           );
 
-        if (results.landmarks.length > 0) {
-          const indexFinger =
-            results.landmarks[0][8];
+        return;
+      }
 
-          const x = indexFinger.x;
-          const y = indexFinger.y;
+      if (
+        timestamp - lastDetectionTime >=
+        detectionInterval
+      ) {
+        lastDetectionTime = timestamp;
 
-          // Guardamos la posición más reciente
-          // sin depender de React.
-          fingerPositionRef.current = {
-            x,
-            y,
-          };
+        if (
+          videoRef.current.readyState >=
+          2
+        ) {
+          try {
+            const results =
+              handLandmarker.detectForVideo(
+                videoRef.current,
+                timestamp
+              );
 
-          // Solo actualizamos React para mostrar
-          // el puntero visual.
-          setFingerPosition({
-            x,
-            y,
-          });
-        } else {
-          fingerPositionRef.current = null;
-          setFingerPosition(null);
+            if (
+              results.landmarks &&
+              results.landmarks.length > 0
+            ) {
+              const indexFinger =
+                results.landmarks[0][8];
+
+              fingerPositionRef.current =
+                {
+                  x: indexFinger.x,
+                  y: indexFinger.y,
+                };
+
+              if (
+                !fingerDetected
+              ) {
+                setFingerDetected(true);
+              }
+            } else {
+              fingerPositionRef.current =
+                null;
+
+              if (fingerDetected) {
+                setFingerDetected(
+                  false
+                );
+              }
+            }
+          } catch (error) {
+            console.error(
+              "Error detectando mano:",
+              error
+            );
+          }
         }
       }
+
+      animationFrame =
+        requestAnimationFrame(
+          detectHand
+        );
     }
 
     animationFrame =
-      requestAnimationFrame(detectHand);
-  }
+      requestAnimationFrame(
+        detectHand
+      );
 
-  animationFrame =
-    requestAnimationFrame(detectHand);
+    return () => {
+      cancelAnimationFrame(
+        animationFrame
+      );
+    };
+  }, [
+    handLandmarker,
+    fingerDetected,
+  ]);
 
-  return () => {
-    cancelAnimationFrame(animationFrame);
-  };
-}, [handLandmarker]);
   // =========================
-  // GENERAR NUEVA POSICIÓN
+  // GENERAR POSICIÓN OBJETIVO
   // =========================
 
   function generateNewTargetPosition(
@@ -508,7 +573,14 @@ useEffect(() => {
 
     let validPosition = false;
 
-    while (!validPosition) {
+    let attempts = 0;
+
+    while (
+      !validPosition &&
+      attempts < 100
+    ) {
+      attempts++;
+
       newX =
         Math.random() * 70 + 15;
 
@@ -517,9 +589,7 @@ useEffect(() => {
 
       validPosition = true;
 
-      // Evitar que aparezca demasiado cerca
-      // de otro objetivo.
-      for (const target of targets) {
+      for (const target of targetsRef.current) {
         if (
           target.id ===
           currentTarget.id
@@ -545,17 +615,21 @@ useEffect(() => {
         }
       }
 
-      // Evitar que aparezca encima del pato.
+      const currentDuck =
+        duckStateRef.current;
+
       const distanceToDuck =
         Math.sqrt(
           Math.pow(
-            newX - duck.x,
+            newX -
+              currentDuck.x,
             2
           ) +
-          Math.pow(
-            newY - duck.y,
-            2
-          )
+            Math.pow(
+              newY -
+                currentDuck.y,
+              2
+            )
         );
 
       if (distanceToDuck < 15) {
@@ -574,35 +648,39 @@ useEffect(() => {
   // =========================
 
   function hitTarget(target) {
-    // Sonido inmediatamente.
+    if (gameOverRef.current) {
+      return;
+    }
+
     playTargetSound();
 
-    // Sumar punto.
     setScore(
       (previousScore) =>
         previousScore + 1
     );
 
-    // Crear nueva posición.
     const newPosition =
       generateNewTargetPosition(
         target
       );
 
-    setTargets(
-      (currentTargets) =>
-        currentTargets.map(
-          (currentTarget) =>
-            currentTarget.id ===
-              target.id
-              ? {
+    const updatedTargets =
+      targetsRef.current.map(
+        (currentTarget) =>
+          currentTarget.id ===
+          target.id
+            ? {
                 ...currentTarget,
                 x: newPosition.x,
                 y: newPosition.y,
               }
-              : currentTarget
-        )
-    );
+            : currentTarget
+      );
+
+    targetsRef.current =
+      updatedTargets;
+
+    setTargets(updatedTargets);
   }
 
   // =========================
@@ -610,7 +688,11 @@ useEffect(() => {
   // =========================
 
   function loseGame() {
-    if (gameOver) return;
+    if (gameOverRef.current) {
+      return;
+    }
+
+    gameOverRef.current = true;
 
     console.log(
       "💀 TOCASTE AL PATO"
@@ -622,64 +704,227 @@ useEffect(() => {
   }
 
   // =========================
-  // COLISIONES
+  // LOOP DEL JUEGO
   // =========================
-useEffect(() => {
-  if (gameOver) {
-    return;
-  }
+  //
+  // Aquí movemos:
+  // - pato
+  // - puntero
+  // - colisiones
+  //
+  // SIN hacer setState constantemente.
+  // =========================
 
-  const finger = fingerPositionRef.current;
+  useEffect(() => {
+    let animationFrame;
 
-  if (!finger) {
-    return;
-  }
+    let lastFrameTime = 0;
 
-  const fingerX =
-    100 - finger.x * 100;
+    function gameLoop(timestamp) {
+      const deltaTime =
+        lastFrameTime === 0
+          ? 16.67
+          : timestamp -
+            lastFrameTime;
 
-  const fingerY =
-    finger.y * 100;
+      lastFrameTime = timestamp;
 
-  for (const target of targets) {
-    const distanceToTarget =
-      Math.sqrt(
-        Math.pow(
-          fingerX - target.x,
-          2
-        ) +
-        Math.pow(
-          fingerY - target.y,
-          2
-        )
+      const cappedDelta =
+        Math.min(
+          deltaTime,
+          50
+        );
+
+      if (!gameOverRef.current) {
+        // =========================
+        // PATO
+        // =========================
+
+        const currentDuck =
+          duckStateRef.current;
+
+        const speed =
+          2.5 +
+          Math.floor(
+            gameTimeRef.current / 5
+          ) *
+            0.25;
+
+        const finalSpeed =
+          Math.min(speed, 5.0);
+
+        // Antes el pato avanzaba
+        // cada 50ms.
+        //
+        // Ahora usamos deltaTime,
+        // haciendo el movimiento
+        // mucho más fluido.
+
+        const movement =
+          finalSpeed *
+          (cappedDelta / 50);
+
+        let newX =
+          currentDuck.x +
+          currentDuck.directionX *
+            movement;
+
+        let newY =
+          currentDuck.y +
+          currentDuck.directionY *
+            movement;
+
+        let newDirectionX =
+          currentDuck.directionX;
+
+        let newDirectionY =
+          currentDuck.directionY;
+
+        if (newX >= 85) {
+          newX = 85;
+          newDirectionX = -1;
+        }
+
+        if (newX <= 15) {
+          newX = 15;
+          newDirectionX = 1;
+        }
+
+        if (newY >= 80) {
+          newY = 80;
+          newDirectionY = -1;
+        }
+
+        if (newY <= 20) {
+          newY = 20;
+          newDirectionY = 1;
+        }
+
+        const newDuck = {
+          x: newX,
+          y: newY,
+          directionX:
+            newDirectionX,
+          directionY:
+            newDirectionY,
+        };
+
+        duckStateRef.current =
+          newDuck;
+
+        // Mover directamente el DOM.
+        if (duckRef.current) {
+          duckRef.current.style.left =
+            `${newX}%`;
+
+          duckRef.current.style.top =
+            `${newY}%`;
+        }
+
+        // =========================
+        // DEDO
+        // =========================
+
+        const finger =
+          fingerPositionRef.current;
+
+        if (finger) {
+          const fingerX =
+            100 -
+            finger.x * 100;
+
+          const fingerY =
+            finger.y * 100;
+
+          // =========================
+          // PUNTERO VISUAL
+          // =========================
+
+          if (
+            fingerPointerRef.current
+          ) {
+            fingerPointerRef.current.style.left =
+              `${fingerX}%`;
+
+            fingerPointerRef.current.style.top =
+              `${fingerY}%`;
+          }
+
+          // =========================
+          // OBJETIVOS
+          // =========================
+
+          const currentTargets =
+            targetsRef.current;
+
+          for (
+            const target of
+            currentTargets
+          ) {
+            const distanceToTarget =
+              Math.sqrt(
+                Math.pow(
+                  fingerX -
+                    target.x,
+                  2
+                ) +
+                  Math.pow(
+                    fingerY -
+                      target.y,
+                    2
+                  )
+              );
+
+            if (
+              distanceToTarget < 8
+            ) {
+              hitTarget(target);
+              break;
+            }
+          }
+
+          // =========================
+          // PATO
+          // =========================
+
+          const distanceToDuck =
+            Math.sqrt(
+              Math.pow(
+                fingerX - newX,
+                2
+              ) +
+                Math.pow(
+                  fingerY - newY,
+                  2
+                )
+            );
+
+          if (
+            distanceToDuck < 15
+          ) {
+            loseGame();
+          }
+        }
+      }
+
+      animationFrame =
+        requestAnimationFrame(
+          gameLoop
+        );
+    }
+
+    animationFrame =
+      requestAnimationFrame(
+        gameLoop
       );
 
-    if (distanceToTarget < 8) {
-      hitTarget(target);
-      return;
-    }
-  }
+    return () => {
+      cancelAnimationFrame(
+        animationFrame
+      );
+    };
+  }, []);
 
-  const distanceToDuck =
-    Math.sqrt(
-      Math.pow(
-        fingerX - duck.x,
-        2
-      ) +
-      Math.pow(
-        fingerY - duck.y,
-        2
-      )
-    );
-
-  if (distanceToDuck < 15) {
-    loseGame();
-  }
-}, [
-  duck,
-  targets,
-  gameOver,
-]);
   // =========================
   // INTERFAZ
   // =========================
@@ -687,7 +932,8 @@ useEffect(() => {
   return (
     <div className="game">
 
-      {/* Cámara */}
+      {/* CÁMARA */}
+
       <video
         ref={videoRef}
         autoPlay
@@ -696,9 +942,7 @@ useEffect(() => {
         className="camera"
       />
 
-      {/* =========================
-          OBJETIVOS
-      ========================= */}
+      {/* OBJETIVOS */}
 
       {targets.map((target) => (
         <Target
@@ -711,42 +955,33 @@ useEffect(() => {
         />
       ))}
 
-      {/* =========================
-          PATO
-      ========================= */}
+      {/* PATO */}
 
       <Duck
+        ref={duckRef}
         x={duck.x}
         y={duck.y}
         direction={duck.directionX}
       />
 
-      {/* =========================
-          PUNTERO
-      ========================= */}
+      {/* PUNTERO */}
 
-      {fingerPosition && (
-        <div
-          className="finger-pointer"
-          style={{
-            left: `${
-              100 -
-              fingerPosition.x *
-                100
-            }%`,
-            top: `${
-              fingerPosition.y *
-              100
-            }%`,
-          }}
-        >
-          👆
-        </div>
-      )}
+      <div
+        ref={fingerPointerRef}
+        className="finger-pointer"
+        style={{
+          display:
+            fingerDetected
+              ? "block"
+              : "none",
+          left: "50%",
+          top: "50%",
+        }}
+      >
+        👆
+      </div>
 
-      {/* =========================
-          HUD
-      ========================= */}
+      {/* HUD */}
 
       <div className="game-ui">
 
@@ -761,7 +996,7 @@ useEffect(() => {
 
         <div className="status">
           {handLandmarker
-            ? fingerPosition
+            ? fingerDetected
               ? "🟢 ¡TOCA LOS OBJETIVOS!"
               : "🟡 Muestra tu mano"
             : "🔵 Cargando detector..."}
@@ -769,42 +1004,43 @@ useEffect(() => {
 
       </div>
 
-      {/* =========================
-          GAME OVER
-      ========================= */}
+      {/* GAME OVER */}
 
       {gameOver && (
         <div className="game-over screen-flash">
-  <div className="game-over-box">
 
-    <h2>¡AYY, SEVERA LOCA!</h2>
+          <div className="game-over-box">
 
-    <p>
-      ¡TOCASTE AL PATO!
-    </p>
+            <h2>
+              ¡AYY, SEVERA LOCA!
+            </h2>
 
-    <div className="final-score">
-      PUNTAJE: {score}
-    </div>
+            <p>
+              ¡TOCASTE AL PATO!
+            </p>
 
-    <div className="crazy-gif">
-      <img
-        src={`${import.meta.env.BASE_URL}loca.gif`}
-        alt="Loca"
-      />
-    </div>
+            <div className="final-score">
+              PUNTAJE: {score}
+            </div>
 
-    <button
-      className="restart-button"
-      onClick={restartGame}
-    >
-      🔄 JUGAR DE NUEVO
-    </button>
+            <div className="crazy-gif">
+              <img
+                src={`${import.meta.env.BASE_URL}loca.gif`}
+                alt="Loca"
+              />
+            </div>
 
-  </div>
-</div>
+            <button
+              className="restart-button"
+              onClick={restartGame}
+            >
+              🔄 JUGAR DE NUEVO
+            </button>
+
+          </div>
+
+        </div>
       )}
-
     </div>
   );
 }
