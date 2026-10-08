@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
 import Target from "./Target";
 import Duck from "./Duck";
-import {
-  FilesetResolver,
-  HandLandmarker,
-} from "@mediapipe/tasks-vision";
+
 import "./Game.css";
 
 function Game() {
@@ -19,86 +21,142 @@ function Game() {
   const duckSoundRef = useRef(null);
   const songRef = useRef(null);
 
-  const gameOverSoundPlayedRef = useRef(false);
-  const songTimeoutRef = useRef(null);
-  const songFadeIntervalRef = useRef(null);
+  const gameOverSoundPlayedRef =
+    useRef(false);
+
+  const songTimeoutRef =
+    useRef(null);
+
+  const songFadeIntervalRef =
+    useRef(null);
 
   // =========================
-  // MEDIAPIPE
+  // WEB WORKER
   // =========================
 
-  const [handLandmarker, setHandLandmarker] =
-    useState(null);
+  const workerRef = useRef(null);
 
-  const handLandmarkerRef = useRef(null);
+  const workerBusyRef =
+    useRef(false);
 
-  // Posición real del dedo.
-  // NO provoca renders.
-  const fingerPositionRef = useRef(null);
+  // =========================
+  // POSICIÓN DEL DEDO
+  // =========================
 
-  // Posición visual del dedo.
-  const fingerPointerRef = useRef(null);
+  const fingerPositionRef =
+    useRef(null);
+
+  const fingerPointerRef =
+    useRef(null);
 
   // =========================
   // ESTADOS
   // =========================
 
-  const [fingerDetected, setFingerDetected] =
-    useState(false);
+  const [
+    fingerDetected,
+    setFingerDetected,
+  ] = useState(false);
 
-  const [score, setScore] = useState(0);
+  const [
+    detectorReady,
+    setDetectorReady,
+  ] = useState(false);
 
-  const [gameOver, setGameOver] =
-    useState(false);
+  const [
+    score,
+    setScore,
+  ] = useState(0);
 
-  const [gameTime, setGameTime] =
-    useState(0);
+  const [
+    gameOver,
+    setGameOver,
+  ] = useState(false);
+
+  const [
+    gameTime,
+    setGameTime,
+  ] = useState(0);
 
   // =========================
   // OBJETIVOS
   // =========================
 
-  const [targets, setTargets] = useState([
-    { id: 1, x: 20, y: 25 },
-    { id: 2, x: 75, y: 25 },
-    { id: 3, x: 25, y: 70 },
-    { id: 4, x: 75, y: 70 },
-    { id: 5, x: 50, y: 50 },
+  const [
+    targets,
+    setTargets,
+  ] = useState([
+    {
+      id: 1,
+      x: 20,
+      y: 25,
+    },
+    {
+      id: 2,
+      x: 75,
+      y: 25,
+    },
+    {
+      id: 3,
+      x: 25,
+      y: 70,
+    },
+    {
+      id: 4,
+      x: 75,
+      y: 70,
+    },
+    {
+      id: 5,
+      x: 50,
+      y: 50,
+    },
   ]);
 
-  const targetsRef = useRef(targets);
+  const targetsRef =
+    useRef(targets);
 
   useEffect(() => {
-    targetsRef.current = targets;
+    targetsRef.current =
+      targets;
   }, [targets]);
 
   // =========================
   // PATO
   // =========================
 
-  const [duck, setDuck] = useState({
+  const [
+    duck,
+    setDuck,
+  ] = useState({
     x: 30,
     y: 40,
     directionX: 1,
     directionY: 1,
   });
 
-  const duckStateRef = useRef({
-    x: 30,
-    y: 40,
-    directionX: 1,
-    directionY: 1,
-  });
+  const duckStateRef =
+    useRef({
+      x: 30,
+      y: 40,
+      directionX: 1,
+      directionY: 1,
+    });
 
-  const gameOverRef = useRef(false);
-  const gameTimeRef = useRef(0);
+  const gameOverRef =
+    useRef(false);
+
+  const gameTimeRef =
+    useRef(0);
 
   useEffect(() => {
-    gameOverRef.current = gameOver;
+    gameOverRef.current =
+      gameOver;
   }, [gameOver]);
 
   useEffect(() => {
-    gameTimeRef.current = gameTime;
+    gameTimeRef.current =
+      gameTime;
   }, [gameTime]);
 
   // =========================
@@ -106,38 +164,51 @@ function Game() {
   // =========================
 
   useEffect(() => {
-    targetSoundRef.current = new Audio(
-      `${import.meta.env.BASE_URL}objetivos.mp3`
-    );
+    targetSoundRef.current =
+      new Audio(
+        `${import.meta.env.BASE_URL}objetivos.mp3`
+      );
 
-    duckSoundRef.current = new Audio(
-      `${import.meta.env.BASE_URL}pato.mp3`
-    );
+    duckSoundRef.current =
+      new Audio(
+        `${import.meta.env.BASE_URL}pato.mp3`
+      );
 
-    songRef.current = new Audio(
-      `${import.meta.env.BASE_URL}severa.mp3`
-    );
+    songRef.current =
+      new Audio(
+        `${import.meta.env.BASE_URL}severa.mp3`
+      );
 
-    songRef.current.loop = true;
-    songRef.current.volume = 0;
+    songRef.current.loop =
+      true;
+
+    songRef.current.volume =
+      0;
 
     return () => {
       if (songTimeoutRef.current) {
-        clearTimeout(songTimeoutRef.current);
+        clearTimeout(
+          songTimeoutRef.current
+        );
       }
 
-      if (songFadeIntervalRef.current) {
+      if (
+        songFadeIntervalRef.current
+      ) {
         clearInterval(
           songFadeIntervalRef.current
         );
       }
 
       targetSoundRef.current?.pause();
+
       duckSoundRef.current?.pause();
+
       songRef.current?.pause();
 
       if (songRef.current) {
-        songRef.current.currentTime = 0;
+        songRef.current.currentTime =
+          0;
       }
     };
   }, []);
@@ -150,16 +221,20 @@ function Game() {
     const sound =
       targetSoundRef.current;
 
-    if (!sound) return;
+    if (!sound) {
+      return;
+    }
 
     sound.currentTime = 0;
 
-    sound.play().catch((error) => {
-      console.log(
-        "No se pudo reproducir el sonido del objetivo:",
-        error
-      );
-    });
+    sound
+      .play()
+      .catch((error) => {
+        console.log(
+          "No se pudo reproducir el sonido del objetivo:",
+          error
+        );
+      });
   }
 
   // =========================
@@ -180,32 +255,44 @@ function Game() {
       duckSoundRef.current;
 
     if (duckSound) {
-      duckSound.currentTime = 0;
+      duckSound.currentTime =
+        0;
 
-      duckSound.play().catch((error) => {
-        console.log(
-          "No se pudo reproducir el sonido del pato:",
-          error
-        );
-      });
+      duckSound
+        .play()
+        .catch((error) => {
+          console.log(
+            "No se pudo reproducir el sonido del pato:",
+            error
+          );
+        });
     }
 
     songTimeoutRef.current =
       setTimeout(() => {
-        const song = songRef.current;
+        const song =
+          songRef.current;
 
-        if (!song) return;
+        if (!song) {
+          return;
+        }
 
         song.pause();
-        song.currentTime = 0;
-        song.volume = 0;
 
-        song.play().catch((error) => {
-          console.log(
-            "No se pudo reproducir la canción:",
-            error
-          );
-        });
+        song.currentTime =
+          0;
+
+        song.volume =
+          0;
+
+        song
+          .play()
+          .catch((error) => {
+            console.log(
+              "No se pudo reproducir la canción:",
+              error
+            );
+          });
 
         let volume = 0;
 
@@ -224,7 +311,8 @@ function Game() {
                 null;
             }
 
-            song.volume = volume;
+            song.volume =
+              volume;
           }, 100);
       }, 500);
   }
@@ -239,23 +327,32 @@ function Game() {
         songTimeoutRef.current
       );
 
-      songTimeoutRef.current = null;
+      songTimeoutRef.current =
+        null;
     }
 
-    if (songFadeIntervalRef.current) {
+    if (
+      songFadeIntervalRef.current
+    ) {
       clearInterval(
         songFadeIntervalRef.current
       );
 
-      songFadeIntervalRef.current = null;
+      songFadeIntervalRef.current =
+        null;
     }
 
-    const song = songRef.current;
+    const song =
+      songRef.current;
 
     if (song) {
       song.pause();
-      song.currentTime = 0;
-      song.volume = 0;
+
+      song.currentTime =
+        0;
+
+      song.volume =
+        0;
     }
   }
 
@@ -269,28 +366,56 @@ function Game() {
     gameOverSoundPlayedRef.current =
       false;
 
-    gameOverRef.current = false;
+    gameOverRef.current =
+      false;
 
-    fingerPositionRef.current = null;
+    fingerPositionRef.current =
+      null;
 
-    setFingerDetected(false);
+    setFingerDetected(
+      false
+    );
 
     setScore(0);
+
     setGameTime(0);
+
     setGameOver(false);
 
     const initialTargets = [
-      { id: 1, x: 20, y: 25 },
-      { id: 2, x: 75, y: 25 },
-      { id: 3, x: 25, y: 70 },
-      { id: 4, x: 75, y: 70 },
-      { id: 5, x: 50, y: 50 },
+      {
+        id: 1,
+        x: 20,
+        y: 25,
+      },
+      {
+        id: 2,
+        x: 75,
+        y: 25,
+      },
+      {
+        id: 3,
+        x: 25,
+        y: 70,
+      },
+      {
+        id: 4,
+        x: 75,
+        y: 70,
+      },
+      {
+        id: 5,
+        x: 50,
+        y: 50,
+      },
     ];
 
     targetsRef.current =
       initialTargets;
 
-    setTargets(initialTargets);
+    setTargets(
+      initialTargets
+    );
 
     const initialDuck = {
       x: 30,
@@ -318,14 +443,17 @@ function Game() {
   // =========================
 
   useEffect(() => {
-    if (gameOver) return;
+    if (gameOver) {
+      return;
+    }
 
-    const timer = setInterval(() => {
-      setGameTime(
-        (previousTime) =>
-          previousTime + 1
-      );
-    }, 1000);
+    const timer =
+      setInterval(() => {
+        setGameTime(
+          (previousTime) =>
+            previousTime + 1
+        );
+      }, 1000);
 
     return () => {
       clearInterval(timer);
@@ -333,60 +461,160 @@ function Game() {
   }, [gameOver]);
 
   // =========================
-  // PREPARAR MEDIAPIPE
+  // WEB WORKER + MEDIAPIPE
   // =========================
 
   useEffect(() => {
-    let cancelled = false;
+    // IMPORTANTE:
+    // Worker CLÁSICO.
+    //
+    // NO usamos:
+    //
+    // {
+    //   type: "module"
+    // }
+    //
+    // porque el Worker necesita
+    // utilizar importScripts().
+const worker = new Worker(
+  new URL("../../workers/handLandmarker.worker.js", import.meta.url)
+);
 
-    async function setupHandDetection() {
-      try {
-        const vision =
-          await FilesetResolver.forVisionTasks(
-            `${import.meta.env.BASE_URL}wasm`
-          );
+    workerRef.current =
+      worker;
 
-        const detector =
-          await HandLandmarker.createFromOptions(
-            vision,
-            {
-              baseOptions: {
-                modelAssetPath:
-                  "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
-                delegate: "GPU",
-              },
+    // =========================
+    // RUTA WASM
+    // =========================
 
-              runningMode: "VIDEO",
+    const wasmPath =
+      new URL(
+        `${import.meta.env.BASE_URL}wasm/`,
+        window.location.href
+      ).href;
 
-              numHands: 1,
-            }
-          );
+      const mediaPipeBundlePath = new URL(
+  `${import.meta.env.BASE_URL}vision_bundle.cjs`,
+  window.location.href
+).href;
+    // =========================
+    // MODELO
+    // =========================
 
-        if (cancelled) {
-          detector.close();
-          return;
-        }
+    const modelAssetPath =
+      "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
 
-        handLandmarkerRef.current =
-          detector;
+    // =========================
+    // INICIALIZAR WORKER
+    // =========================
+worker.postMessage({
+  type: "INIT",
+  bundlePath: mediaPipeBundlePath,
+  wasmPath,
+  modelAssetPath,
+});
 
-        setHandLandmarker(detector);
+    // =========================
+    // MENSAJES WORKER
+    // =========================
 
+    worker.onmessage = (event) => {
+      const data =
+        event.data;
+
+      // =======================
+      // MEDIAPIPE LISTO
+      // =======================
+
+      if (
+        data.type === "READY"
+      ) {
         console.log(
-          "✅ Detector de manos listo"
+          "✅ Detector de manos listo en Web Worker"
         );
-      } catch (error) {
-        console.error(
-          "❌ Error preparando MediaPipe:",
-          error
-        );
-      }
-    }
 
-    setupHandDetection();
+        setDetectorReady(
+          true
+        );
+
+        return;
+      }
+
+      // =======================
+      // RESULTADO
+      // =======================
+
+   if (
+  data.type === "RESULT"
+) {
+  workerBusyRef.current =
+    false;
+
+  if (data.finger) {
+    fingerPositionRef.current =
+      data.finger;
+
+    setFingerDetected(
+      true
+    );
+  } else {
+    fingerPositionRef.current =
+      null;
+
+    setFingerDetected(
+      false
+    );
+  }
+
+  return;
+}
+      // =======================
+      // ERROR
+      // =======================
+
+    if (
+  data.type === "ERROR"
+) {
+  workerBusyRef.current =
+    false;
+
+  console.error(
+    "❌ MediaPipe Worker:",
+    data.message
+  );
+}
+    };
+
+    // =========================
+    // ERROR DEL WORKER
+    // =========================
+
+    worker.onerror = (error) => {
+      workerBusyRef.current =
+        false;
+
+      console.error(
+        "❌ Error del Web Worker:",
+        error
+      );
+    };
+
+    // =========================
+    // LIMPIEZA
+    // =========================
 
     return () => {
-      cancelled = true;
+      worker.postMessage({
+        type: "CLOSE",
+      });
+
+      worker.terminate();
+
+      workerRef.current =
+        null;
+
+      workerBusyRef.current =
+        false;
     };
   }, []);
 
@@ -405,9 +633,6 @@ function Game() {
               video: {
                 facingMode: "user",
 
-                // IMPORTANTE:
-                // reducimos la resolución que recibe
-                // MediaPipe para mejorar rendimiento.
                 width: {
                   ideal: 640,
                   max: 640,
@@ -432,9 +657,9 @@ function Game() {
           videoRef.current.srcObject =
             stream;
 
-          videoRef.current.play().catch(
-            () => {}
-          );
+          videoRef.current
+            .play()
+            .catch(() => {});
         }
       } catch (error) {
         console.error(
@@ -462,20 +687,21 @@ function Game() {
   // =========================
 
   useEffect(() => {
-    if (!handLandmarker) return;
-
     let animationFrame;
 
-    let lastDetectionTime = 0;
+    let lastDetectionTime =
+      0;
 
-    // Aproximadamente 24 FPS.
-    // Dejamos espacio al navegador
-    // para dibujar el juego.
-    const detectionInterval = 42;
+    const detectionInterval =
+      42;
 
-    function detectHand(timestamp) {
+    async function detectHand(
+      timestamp
+    ) {
       if (
         !videoRef.current ||
+        !workerRef.current ||
+        !detectorReady ||
         gameOverRef.current
       ) {
         animationFrame =
@@ -486,54 +712,53 @@ function Game() {
         return;
       }
 
+      // =======================
+      // ~24 FPS
+      // =======================
+
       if (
-        timestamp - lastDetectionTime >=
+        timestamp -
+          lastDetectionTime >=
         detectionInterval
       ) {
-        lastDetectionTime = timestamp;
+        lastDetectionTime =
+          timestamp;
+
+        // =====================
+        // NO CREAR COLA
+        // =====================
 
         if (
-          videoRef.current.readyState >=
-          2
+          !workerBusyRef.current &&
+          videoRef.current
+            .readyState >= 2
         ) {
+          workerBusyRef.current =
+            true;
+
           try {
-            const results =
-              handLandmarker.detectForVideo(
-                videoRef.current,
-                timestamp
+            const bitmap =
+              await createImageBitmap(
+                videoRef.current
               );
 
-            if (
-              results.landmarks &&
-              results.landmarks.length > 0
-            ) {
-              const indexFinger =
-                results.landmarks[0][8];
+            workerRef.current.postMessage(
+              {
+                type: "DETECT",
 
-              fingerPositionRef.current =
-                {
-                  x: indexFinger.x,
-                  y: indexFinger.y,
-                };
+                bitmap,
 
-              if (
-                !fingerDetected
-              ) {
-                setFingerDetected(true);
-              }
-            } else {
-              fingerPositionRef.current =
-                null;
-
-              if (fingerDetected) {
-                setFingerDetected(
-                  false
-                );
-              }
-            }
+                timestamp:
+                  performance.now(),
+              },
+              [bitmap]
+            );
           } catch (error) {
-            console.error(
-              "Error detectando mano:",
+            workerBusyRef.current =
+              false;
+
+            console.warn(
+              "No se pudo crear ImageBitmap:",
               error
             );
           }
@@ -556,10 +781,7 @@ function Game() {
         animationFrame
       );
     };
-  }, [
-    handLandmarker,
-    fingerDetected,
-  ]);
+  }, [detectorReady]);
 
   // =========================
   // GENERAR POSICIÓN OBJETIVO
@@ -571,7 +793,8 @@ function Game() {
     let newX;
     let newY;
 
-    let validPosition = false;
+    let validPosition =
+      false;
 
     let attempts = 0;
 
@@ -587,9 +810,13 @@ function Game() {
       newY =
         Math.random() * 55 + 22;
 
-      validPosition = true;
+      validPosition =
+        true;
 
-      for (const target of targetsRef.current) {
+      for (
+        const target of
+          targetsRef.current
+      ) {
         if (
           target.id ===
           currentTarget.id
@@ -600,17 +827,23 @@ function Game() {
         const distance =
           Math.sqrt(
             Math.pow(
-              newX - target.x,
+              newX -
+                target.x,
               2
             ) +
-            Math.pow(
-              newY - target.y,
-              2
-            )
+              Math.pow(
+                newY -
+                  target.y,
+                2
+              )
           );
 
-        if (distance < 14) {
-          validPosition = false;
+        if (
+          distance < 14
+        ) {
+          validPosition =
+            false;
+
           break;
         }
       }
@@ -632,8 +865,11 @@ function Game() {
             )
         );
 
-      if (distanceToDuck < 15) {
-        validPosition = false;
+      if (
+        distanceToDuck < 15
+      ) {
+        validPosition =
+          false;
       }
     }
 
@@ -648,7 +884,9 @@ function Game() {
   // =========================
 
   function hitTarget(target) {
-    if (gameOverRef.current) {
+    if (
+      gameOverRef.current
+    ) {
       return;
     }
 
@@ -680,7 +918,9 @@ function Game() {
     targetsRef.current =
       updatedTargets;
 
-    setTargets(updatedTargets);
+    setTargets(
+      updatedTargets
+    );
   }
 
   // =========================
@@ -688,11 +928,14 @@ function Game() {
   // =========================
 
   function loseGame() {
-    if (gameOverRef.current) {
+    if (
+      gameOverRef.current
+    ) {
       return;
     }
 
-    gameOverRef.current = true;
+    gameOverRef.current =
+      true;
 
     console.log(
       "💀 TOCASTE AL PATO"
@@ -706,28 +949,24 @@ function Game() {
   // =========================
   // LOOP DEL JUEGO
   // =========================
-  //
-  // Aquí movemos:
-  // - pato
-  // - puntero
-  // - colisiones
-  //
-  // SIN hacer setState constantemente.
-  // =========================
 
   useEffect(() => {
     let animationFrame;
 
-    let lastFrameTime = 0;
+    let lastFrameTime =
+      0;
 
-    function gameLoop(timestamp) {
+    function gameLoop(
+      timestamp
+    ) {
       const deltaTime =
         lastFrameTime === 0
           ? 16.67
           : timestamp -
             lastFrameTime;
 
-      lastFrameTime = timestamp;
+      lastFrameTime =
+        timestamp;
 
       const cappedDelta =
         Math.min(
@@ -735,10 +974,12 @@ function Game() {
           50
         );
 
-      if (!gameOverRef.current) {
-        // =========================
+      if (
+        !gameOverRef.current
+      ) {
+        // =======================
         // PATO
-        // =========================
+        // =======================
 
         const currentDuck =
           duckStateRef.current;
@@ -746,19 +987,16 @@ function Game() {
         const speed =
           2.5 +
           Math.floor(
-            gameTimeRef.current / 5
+            gameTimeRef.current /
+              5
           ) *
             0.25;
 
         const finalSpeed =
-          Math.min(speed, 5.0);
-
-        // Antes el pato avanzaba
-        // cada 50ms.
-        //
-        // Ahora usamos deltaTime,
-        // haciendo el movimiento
-        // mucho más fluido.
+          Math.min(
+            speed,
+            5.0
+          );
 
         const movement =
           finalSpeed *
@@ -782,22 +1020,30 @@ function Game() {
 
         if (newX >= 85) {
           newX = 85;
-          newDirectionX = -1;
+
+          newDirectionX =
+            -1;
         }
 
         if (newX <= 15) {
           newX = 15;
-          newDirectionX = 1;
+
+          newDirectionX =
+            1;
         }
 
         if (newY >= 80) {
           newY = 80;
-          newDirectionY = -1;
+
+          newDirectionY =
+            -1;
         }
 
         if (newY <= 20) {
           newY = 20;
-          newDirectionY = 1;
+
+          newDirectionY =
+            1;
         }
 
         const newDuck = {
@@ -812,8 +1058,9 @@ function Game() {
         duckStateRef.current =
           newDuck;
 
-        // Mover directamente el DOM.
-        if (duckRef.current) {
+        if (
+          duckRef.current
+        ) {
           duckRef.current.style.left =
             `${newX}%`;
 
@@ -821,9 +1068,9 @@ function Game() {
             `${newY}%`;
         }
 
-        // =========================
+        // =======================
         // DEDO
-        // =========================
+        // =======================
 
         const finger =
           fingerPositionRef.current;
@@ -836,9 +1083,9 @@ function Game() {
           const fingerY =
             finger.y * 100;
 
-          // =========================
-          // PUNTERO VISUAL
-          // =========================
+          // =====================
+          // PUNTERO
+          // =====================
 
           if (
             fingerPointerRef.current
@@ -850,16 +1097,16 @@ function Game() {
               `${fingerY}%`;
           }
 
-          // =========================
+          // =====================
           // OBJETIVOS
-          // =========================
+          // =====================
 
           const currentTargets =
             targetsRef.current;
 
           for (
             const target of
-            currentTargets
+              currentTargets
           ) {
             const distanceToTarget =
               Math.sqrt(
@@ -879,22 +1126,25 @@ function Game() {
               distanceToTarget < 8
             ) {
               hitTarget(target);
+
               break;
             }
           }
 
-          // =========================
+          // =====================
           // PATO
-          // =========================
+          // =====================
 
           const distanceToDuck =
             Math.sqrt(
               Math.pow(
-                fingerX - newX,
+                fingerX -
+                  newX,
                 2
               ) +
                 Math.pow(
-                  fingerY - newY,
+                  fingerY -
+                    newY,
                   2
                 )
             );
@@ -944,16 +1194,20 @@ function Game() {
 
       {/* OBJETIVOS */}
 
-      {targets.map((target) => (
-        <Target
-          key={target.id}
-          x={target.x}
-          y={target.y}
-          onHit={() =>
-            hitTarget(target)
-          }
-        />
-      ))}
+      {targets.map(
+        (target) => (
+          <Target
+            key={target.id}
+            x={target.x}
+            y={target.y}
+            onHit={() =>
+              hitTarget(
+                target
+              )
+            }
+          />
+        )
+      )}
 
       {/* PATO */}
 
@@ -961,20 +1215,26 @@ function Game() {
         ref={duckRef}
         x={duck.x}
         y={duck.y}
-        direction={duck.directionX}
+        direction={
+          duck.directionX
+        }
       />
 
       {/* PUNTERO */}
 
       <div
-        ref={fingerPointerRef}
+        ref={
+          fingerPointerRef
+        }
         className="finger-pointer"
         style={{
           display:
             fingerDetected
               ? "block"
               : "none",
+
           left: "50%",
+
           top: "50%",
         }}
       >
@@ -995,7 +1255,7 @@ function Game() {
         </div>
 
         <div className="status">
-          {handLandmarker
+          {detectorReady
             ? fingerDetected
               ? "🟢 ¡TOCA LOS OBJETIVOS!"
               : "🟡 Muestra tu mano"
@@ -1032,7 +1292,9 @@ function Game() {
 
             <button
               className="restart-button"
-              onClick={restartGame}
+              onClick={
+                restartGame
+              }
             >
               🔄 JUGAR DE NUEVO
             </button>
@@ -1041,6 +1303,7 @@ function Game() {
 
         </div>
       )}
+
     </div>
   );
 }
