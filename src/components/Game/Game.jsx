@@ -737,10 +737,15 @@ worker.postMessage({
             true;
 
           try {
-            const bitmap =
-              await createImageBitmap(
-                videoRef.current
-              );
+            
+const bitmap = await createImageBitmap(
+  videoRef.current,
+  {
+    resizeWidth: 320,
+    resizeHeight: 240,
+    resizeQuality: "low",
+  }
+);
 
             workerRef.current.postMessage(
               {
