@@ -166,11 +166,16 @@ self.onmessage = async (event) => {
     }
 
     try {
-      const results =
-        handLandmarker.detectForVideo(
-          bitmap,
-          timestamp
-        );
+      const startTime = performance.now();
+
+const results =
+  handLandmarker.detectForVideo(
+    bitmap,
+    timestamp
+  );
+
+const processingTime =
+  performance.now() - startTime;
 
       let finger = null;
 
@@ -187,10 +192,11 @@ self.onmessage = async (event) => {
         };
       }
 
-      self.postMessage({
-        type: "RESULT",
-        finger,
-      });
+   self.postMessage({
+  type: "RESULT",
+  finger,
+  processingTime,
+});
     } catch (error) {
       console.error(
         "❌ Worker: error detectando mano:",

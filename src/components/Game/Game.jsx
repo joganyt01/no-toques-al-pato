@@ -476,9 +476,9 @@ function Game() {
     //
     // porque el Worker necesita
     // utilizar importScripts().
-const worker = new Worker(
-  new URL("../../workers/handLandmarker.worker.js", import.meta.url)
-);
+    const worker = new Worker(
+      new URL("../../workers/handLandmarker.worker.js", import.meta.url)
+    );
 
     workerRef.current =
       worker;
@@ -493,10 +493,10 @@ const worker = new Worker(
         window.location.href
       ).href;
 
-      const mediaPipeBundlePath = new URL(
-  `${import.meta.env.BASE_URL}vision_bundle.js`,
-  window.location.href
-).href;
+    const mediaPipeBundlePath = new URL(
+      `${import.meta.env.BASE_URL}vision_bundle.js`,
+      window.location.href
+    ).href;
     // =========================
     // MODELO
     // =========================
@@ -507,12 +507,12 @@ const worker = new Worker(
     // =========================
     // INICIALIZAR WORKER
     // =========================
-worker.postMessage({
-  type: "INIT",
-  bundlePath: mediaPipeBundlePath,
-  wasmPath,
-  modelAssetPath,
-});
+    worker.postMessage({
+      type: "INIT",
+      bundlePath: mediaPipeBundlePath,
+      wasmPath,
+      modelAssetPath,
+    });
 
     // =========================
     // MENSAJES WORKER
@@ -544,45 +544,51 @@ worker.postMessage({
       // RESULTADO
       // =======================
 
-   if (
-  data.type === "RESULT"
-) {
-  workerBusyRef.current =
-    false;
+      if (
+        data.type === "RESULT"
+      ) {
 
-  if (data.finger) {
-    fingerPositionRef.current =
-      data.finger;
+        console.log(
+          "⏱️ Tiempo de detección:",
+          data.processingTime?.toFixed(1),
+          "ms"
+        );
+        workerBusyRef.current =
+          false;
 
-    setFingerDetected(
-      true
-    );
-  } else {
-    fingerPositionRef.current =
-      null;
+        if (data.finger) {
+          fingerPositionRef.current =
+            data.finger;
 
-    setFingerDetected(
-      false
-    );
-  }
+          setFingerDetected(
+            true
+          );
+        } else {
+          fingerPositionRef.current =
+            null;
 
-  return;
-}
+          setFingerDetected(
+            false
+          );
+        }
+
+        return;
+      }
       // =======================
       // ERROR
       // =======================
 
-    if (
-  data.type === "ERROR"
-) {
-  workerBusyRef.current =
-    false;
+      if (
+        data.type === "ERROR"
+      ) {
+        workerBusyRef.current =
+          false;
 
-  console.error(
-    "❌ MediaPipe Worker:",
-    data.message
-  );
-}
+        console.error(
+          "❌ MediaPipe Worker:",
+          data.message
+        );
+      }
     };
 
     // =========================
@@ -659,7 +665,7 @@ worker.postMessage({
 
           videoRef.current
             .play()
-            .catch(() => {});
+            .catch(() => { });
         }
       } catch (error) {
         console.error(
@@ -718,7 +724,7 @@ worker.postMessage({
 
       if (
         timestamp -
-          lastDetectionTime >=
+        lastDetectionTime >=
         detectionInterval
       ) {
         lastDetectionTime =
@@ -737,15 +743,15 @@ worker.postMessage({
             true;
 
           try {
-            
-const bitmap = await createImageBitmap(
-  videoRef.current,
-  {
-    resizeWidth: 320,
-    resizeHeight: 240,
-    resizeQuality: "low",
-  }
-);
+
+            const bitmap = await createImageBitmap(
+              videoRef.current,
+              {
+                resizeWidth: 320,
+                resizeHeight: 240,
+                resizeQuality: "low",
+              }
+            );
 
             workerRef.current.postMessage(
               {
@@ -820,7 +826,7 @@ const bitmap = await createImageBitmap(
 
       for (
         const target of
-          targetsRef.current
+        targetsRef.current
       ) {
         if (
           target.id ===
@@ -833,14 +839,14 @@ const bitmap = await createImageBitmap(
           Math.sqrt(
             Math.pow(
               newX -
-                target.x,
+              target.x,
               2
             ) +
-              Math.pow(
-                newY -
-                  target.y,
-                2
-              )
+            Math.pow(
+              newY -
+              target.y,
+              2
+            )
           );
 
         if (
@@ -860,14 +866,14 @@ const bitmap = await createImageBitmap(
         Math.sqrt(
           Math.pow(
             newX -
-              currentDuck.x,
+            currentDuck.x,
             2
           ) +
-            Math.pow(
-              newY -
-                currentDuck.y,
-              2
-            )
+          Math.pow(
+            newY -
+            currentDuck.y,
+            2
+          )
         );
 
       if (
@@ -911,12 +917,12 @@ const bitmap = await createImageBitmap(
       targetsRef.current.map(
         (currentTarget) =>
           currentTarget.id ===
-          target.id
+            target.id
             ? {
-                ...currentTarget,
-                x: newPosition.x,
-                y: newPosition.y,
-              }
+              ...currentTarget,
+              x: newPosition.x,
+              y: newPosition.y,
+            }
             : currentTarget
       );
 
@@ -968,7 +974,7 @@ const bitmap = await createImageBitmap(
         lastFrameTime === 0
           ? 16.67
           : timestamp -
-            lastFrameTime;
+          lastFrameTime;
 
       lastFrameTime =
         timestamp;
@@ -990,17 +996,17 @@ const bitmap = await createImageBitmap(
           duckStateRef.current;
 
         const speed =
-          2.5 +
+          2.0 +
           Math.floor(
             gameTimeRef.current /
-              5
+            5
           ) *
-            0.25;
+          0.25;
 
         const finalSpeed =
           Math.min(
             speed,
-            5.0
+            4.0
           );
 
         const movement =
@@ -1010,12 +1016,12 @@ const bitmap = await createImageBitmap(
         let newX =
           currentDuck.x +
           currentDuck.directionX *
-            movement;
+          movement;
 
         let newY =
           currentDuck.y +
           currentDuck.directionY *
-            movement;
+          movement;
 
         let newDirectionX =
           currentDuck.directionX;
@@ -1111,20 +1117,20 @@ const bitmap = await createImageBitmap(
 
           for (
             const target of
-              currentTargets
+            currentTargets
           ) {
             const distanceToTarget =
               Math.sqrt(
                 Math.pow(
                   fingerX -
-                    target.x,
+                  target.x,
                   2
                 ) +
-                  Math.pow(
-                    fingerY -
-                      target.y,
-                    2
-                  )
+                Math.pow(
+                  fingerY -
+                  target.y,
+                  2
+                )
               );
 
             if (
@@ -1144,14 +1150,14 @@ const bitmap = await createImageBitmap(
             Math.sqrt(
               Math.pow(
                 fingerX -
-                  newX,
+                newX,
                 2
               ) +
-                Math.pow(
-                  fingerY -
-                    newY,
-                  2
-                )
+              Math.pow(
+                fingerY -
+                newY,
+                2
+              )
             );
 
           if (
