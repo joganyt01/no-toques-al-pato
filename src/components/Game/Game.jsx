@@ -494,7 +494,7 @@ const worker = new Worker(
       ).href;
 
       const mediaPipeBundlePath = new URL(
-  `${import.meta.env.BASE_URL}vision_bundle.cjs`,
+  `${import.meta.env.BASE_URL}vision_bundle.js`,
   window.location.href
 ).href;
     // =========================
