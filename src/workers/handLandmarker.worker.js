@@ -112,7 +112,7 @@ self.onmessage = async (event) => {
           {
             baseOptions: {
               modelAssetPath,
-              delegate: "GPU",
+              delegate: "CPU",
             },
 
             runningMode: "VIDEO",
