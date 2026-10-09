@@ -147,9 +147,11 @@ self.onmessage = async (event) => {
 
   if (type === "DETECT") {
     const {
-      bitmap,
-      timestamp,
-    } = event.data;
+  bitmap,
+  timestamp,
+  sentAt,
+  bitmapCreationTime,
+} = event.data;
 
     if (!handLandmarker) {
       if (bitmap) {
@@ -168,14 +170,14 @@ self.onmessage = async (event) => {
     try {
       const startTime = performance.now();
 
-const results =
-  handLandmarker.detectForVideo(
-    bitmap,
-    timestamp
-  );
+      const results =
+        handLandmarker.detectForVideo(
+          bitmap,
+          timestamp
+        );
 
-const processingTime =
-  performance.now() - startTime;
+      const processingTime =
+        performance.now() - startTime;
 
       let finger = null;
 
@@ -192,10 +194,12 @@ const processingTime =
         };
       }
 
-   self.postMessage({
+     self.postMessage({
   type: "RESULT",
   finger,
   processingTime,
+  sentAt,
+  bitmapCreationTime,
 });
     } catch (error) {
       console.error(

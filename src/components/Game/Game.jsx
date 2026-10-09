@@ -39,6 +39,13 @@ function Game() {
   const workerBusyRef =
     useRef(false);
 
+  const detectionStatsRef = useRef({
+    count: 0,
+    processing: 0,
+    capture: 0,
+    roundTrip: 0,
+  });
+
   // =========================
   // POSICIÓN DEL DEDO
   // =========================
@@ -518,79 +525,67 @@ function Game() {
     // MENSAJES WORKER
     // =========================
 
-    worker.onmessage = (event) => {
-      const data =
-        event.data;
+worker.onmessage = (event) => {
+  const data = event.data;
 
-      // =======================
-      // MEDIAPIPE LISTO
-      // =======================
+  // DETECTOR LISTO
+  if (data.type === "READY") {
+    console.log("✅ Detector de manos listo en Web Worker");
+    setDetectorReady(true);
+    return;
+  }
 
-      if (
-        data.type === "READY"
-      ) {
-        console.log(
-          "✅ Detector de manos listo en Web Worker"
-        );
+  // RESULTADO DE LA DETECCIÓN
+  if (data.type === "RESULT") {
+    workerBusyRef.current = false;
 
-        setDetectorReady(
-          true
-        );
+    const stats = detectionStatsRef.current;
 
-        return;
-      }
+    stats.count += 1;
+    stats.processing += data.processingTime ?? 0;
+    stats.capture += data.bitmapCreationTime ?? 0;
+    stats.roundTrip +=
+      performance.now() - (data.sentAt ?? performance.now());
 
-      // =======================
-      // RESULTADO
-      // =======================
+    if (stats.count >= 10) {
+      console.log("📊 Rendimiento MediaPipe en móvil:", {
+        detecciones: stats.count,
+        capturaPromedioMs: +(
+          stats.capture / stats.count
+        ).toFixed(1),
+        procesamientoPromedioMs: +(
+          stats.processing / stats.count
+        ).toFixed(1),
+        idaYVueltaPromedioMs: +(
+          stats.roundTrip / stats.count
+        ).toFixed(1),
+      });
 
-      if (
-        data.type === "RESULT"
-      ) {
+      detectionStatsRef.current = {
+        count: 0,
+        processing: 0,
+        capture: 0,
+        roundTrip: 0,
+      };
+    }
 
-        console.log(
-          "⏱️ Tiempo de detección:",
-          data.processingTime?.toFixed(1),
-          "ms"
-        );
-        workerBusyRef.current =
-          false;
+    if (data.finger) {
+      fingerPositionRef.current = data.finger;
+      setFingerDetected(true);
+    } else {
+      fingerPositionRef.current = null;
+      setFingerDetected(false);
+    }
 
-        if (data.finger) {
-          fingerPositionRef.current =
-            data.finger;
+    return;
+  }
 
-          setFingerDetected(
-            true
-          );
-        } else {
-          fingerPositionRef.current =
-            null;
-
-          setFingerDetected(
-            false
-          );
-        }
-
-        return;
-      }
-      // =======================
-      // ERROR
-      // =======================
-
-      if (
-        data.type === "ERROR"
-      ) {
-        workerBusyRef.current =
-          false;
-
-        console.error(
-          "❌ MediaPipe Worker:",
-          data.message
-        );
-      }
-    };
-
+  // ERROR DEL WORKER
+  if (data.type === "ERROR") {
+    workerBusyRef.current = false;
+    console.error("❌ MediaPipe Worker:", data.message);
+  }
+};
     // =========================
     // ERROR DEL WORKER
     // =========================
@@ -744,6 +739,9 @@ function Game() {
 
           try {
 
+
+            const captureStartedAt = performance.now();
+
             const bitmap = await createImageBitmap(
               videoRef.current,
               {
@@ -753,14 +751,16 @@ function Game() {
               }
             );
 
+            const bitmapCreationTime =
+              performance.now() - captureStartedAt;
+
             workerRef.current.postMessage(
               {
                 type: "DETECT",
-
                 bitmap,
-
-                timestamp:
-                  performance.now(),
+                timestamp: performance.now(),
+                sentAt: performance.now(),
+                bitmapCreationTime,
               },
               [bitmap]
             );
