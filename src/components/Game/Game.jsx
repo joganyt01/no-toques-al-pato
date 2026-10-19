@@ -525,67 +525,68 @@ function Game() {
     // MENSAJES WORKER
     // =========================
 
-    worker.onmessage = (event) => {
-      const data = event.data;
+worker.onmessage = (event) => {
+  const data = event.data;
 
-      // DETECTOR LISTO
-      if (data.type === "READY") {
-        console.log("✅ Detector de manos listo en Web Worker");
-        setDetectorReady(true);
-        return;
-      }
+  // DETECTOR LISTO
+  if (data.type === "READY") {
+    console.log("✅ Detector de manos listo en Web Worker");
+    setDetectorReady(true);
+    return;
+  }
 
-      // RESULTADO DE LA DETECCIÓN
-      if (data.type === "RESULT") {
-        workerBusyRef.current = false;
+  // RESULTADO DE LA DETECCIÓN
+  if (data.type === "RESULT") {
+    workerBusyRef.current = false;
 
-        const stats = detectionStatsRef.current;
+    const stats = detectionStatsRef.current;
 
-        stats.count += 1;
-        stats.processing += data.processingTime ?? 0;
-        stats.capture += data.bitmapCreationTime ?? 0;
-        stats.roundTrip +=
-          performance.now() - (data.sentAt ?? performance.now());
+    stats.count += 1;
+    stats.processing += data.processingTime ?? 0;
+    stats.capture += data.bitmapCreationTime ?? 0;
+    stats.roundTrip +=
+      performance.now() - (data.sentAt ?? performance.now());
 
-        if (stats.count >= 10) {
-          console.log("📊 Rendimiento MediaPipe en móvil:", {
-            detecciones: stats.count,
-            capturaPromedioMs: +(
-              stats.capture / stats.count
-            ).toFixed(1),
-            procesamientoPromedioMs: +(
-              stats.processing / stats.count
-            ).toFixed(1),
-            idaYVueltaPromedioMs: +(
-              stats.roundTrip / stats.count
-            ).toFixed(1),
-          });
+    if (stats.count >= 10) {
 
-          detectionStatsRef.current = {
-            count: 0,
-            processing: 0,
-            capture: 0,
-            roundTrip: 0,
-          };
-        }
+      console.log("🔎 Diagnóstico de mano:", {
+  manosDetectadas: data.handCount,
+  puntaIndice: data.finger,
+  muñeca: data.wrist,
+  baseIndice: data.indexBase,
+});
+     console.log(
+  `📊 Rendimiento: ` +
+  `captura=${(stats.capture / stats.count).toFixed(1)} ms | ` +
+  `procesamiento=${(stats.processing / stats.count).toFixed(1)} ms | ` +
+  `total=${(stats.roundTrip / stats.count).toFixed(1)} ms`
+);
 
-        if (data.finger) {
-          fingerPositionRef.current = data.finger;
-          setFingerDetected(true);
-        } else {
-          fingerPositionRef.current = null;
-          setFingerDetected(false);
-        }
+      detectionStatsRef.current = {
+        count: 0,
+        processing: 0,
+        capture: 0,
+        roundTrip: 0,
+      };
+    }
 
-        return;
-      }
+    if (data.finger) {
+      fingerPositionRef.current = data.finger;
+      setFingerDetected(true);
+    } else {
+      fingerPositionRef.current = null;
+      setFingerDetected(false);
+    }
 
-      // ERROR DEL WORKER
-      if (data.type === "ERROR") {
-        workerBusyRef.current = false;
-        console.error("❌ MediaPipe Worker:", data.message);
-      }
-    };
+    return;
+  }
+
+  // ERROR DEL WORKER
+  if (data.type === "ERROR") {
+    workerBusyRef.current = false;
+    console.error("❌ MediaPipe Worker:", data.message);
+  }
+};
     // =========================
     // ERROR DEL WORKER
     // =========================
@@ -745,8 +746,8 @@ function Game() {
             const bitmap = await createImageBitmap(
               videoRef.current,
               {
-                resizeWidth: 256,
-                resizeHeight: 192,
+                resizeWidth: 320,
+                resizeHeight: 240,
                 resizeQuality: "low",
               }
             );

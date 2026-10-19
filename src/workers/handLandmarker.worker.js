@@ -147,11 +147,11 @@ self.onmessage = async (event) => {
 
   if (type === "DETECT") {
     const {
-  bitmap,
-  timestamp,
-  sentAt,
-  bitmapCreationTime,
-} = event.data;
+      bitmap,
+      timestamp,
+      sentAt,
+      bitmapCreationTime,
+    } = event.data;
 
     if (!handLandmarker) {
       if (bitmap) {
@@ -180,27 +180,53 @@ self.onmessage = async (event) => {
         performance.now() - startTime;
 
       let finger = null;
+      let wrist = null;
+      let indexBase = null;
 
-      if (
-        results.landmarks &&
-        results.landmarks.length > 0
-      ) {
-        const indexFinger =
-          results.landmarks[0][8];
+      const handCount =
+        results.landmarks?.length ?? 0;
+
+      if (handCount > 0) {
+        const landmarks = results.landmarks[0];
+
+        // Punta del dedo índice
+        const indexFinger = landmarks[8];
+
+        // Muñeca
+        const wristPoint = landmarks[0];
+
+        // Base del dedo índice
+        const indexBasePoint = landmarks[5];
 
         finger = {
           x: indexFinger.x,
           y: indexFinger.y,
         };
+
+        wrist = {
+          x: wristPoint.x,
+          y: wristPoint.y,
+        };
+
+        indexBase = {
+          x: indexBasePoint.x,
+          y: indexBasePoint.y,
+        };
       }
 
-     self.postMessage({
+
+     
+self.postMessage({
   type: "RESULT",
   finger,
+  wrist,
+  indexBase,
+  handCount,
   processingTime,
   sentAt,
   bitmapCreationTime,
 });
+
     } catch (error) {
       console.error(
         "❌ Worker: error detectando mano:",
