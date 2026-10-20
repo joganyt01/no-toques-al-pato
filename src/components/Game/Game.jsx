@@ -13,6 +13,8 @@ function Game() {
   const videoRef = useRef(null);
   const duckRef = useRef(null);
 
+  const cameraReadyRef = useRef(false);
+
   // =========================
   // AUDIOS
   // =========================
@@ -69,6 +71,64 @@ function Game() {
     detectorReady,
     setDetectorReady,
   ] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [showLoadingScreen, setShowLoadingScreen] = useState(true);
+  const [loadingFinishing, setLoadingFinishing] = useState(false);
+  const [audioReady, setAudioReady] = useState(false);
+
+
+
+  useEffect(() => {
+    let progress = 0;
+
+    if (cameraReady) {
+      progress += 30;
+    }
+
+    if (detectorReady) {
+      progress += 50;
+    }
+
+    if (audioReady) {
+      progress += 20;
+    }
+
+    setLoadingProgress(progress);
+  }, [cameraReady, detectorReady, audioReady]);
+
+
+
+  useEffect(() => {
+    if (!cameraReady || !detectorReady || !audioReady) {
+      return;
+    }
+
+    setLoadingProgress(100);
+    setLoadingFinishing(true);
+
+    const timeout = setTimeout(() => {
+      setShowLoadingScreen(false);
+    }, 700);
+
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, [cameraReady, detectorReady, audioReady]);
+
+
+  useEffect(() => {
+    cameraReadyRef.current =
+      cameraReady &&
+      detectorReady &&
+      audioReady &&
+      !showLoadingScreen;
+  }, [
+    cameraReady,
+    detectorReady,
+    audioReady,
+    showLoadingScreen,
+  ]);
 
   const [
     score,
@@ -166,59 +226,101 @@ function Game() {
       gameTime;
   }, [gameTime]);
 
+
   // =========================
   // PREPARAR AUDIOS
   // =========================
 
   useEffect(() => {
-    targetSoundRef.current =
-      new Audio(
-        `${import.meta.env.BASE_URL}objetivos.mp3`
+    const targetSound = new Audio(
+      `${import.meta.env.BASE_URL}objetivos.mp3`
+    );
+
+    const duckSound = new Audio(
+      `${import.meta.env.BASE_URL}pato.mp3`
+    );
+
+    const song = new Audio(
+      `${import.meta.env.BASE_URL}severa.mp3`
+    );
+
+    targetSoundRef.current = targetSound;
+    duckSoundRef.current = duckSound;
+    songRef.current = song;
+
+    song.loop = true;
+    song.volume = 0;
+
+    const audios = [
+      targetSound,
+      duckSound,
+      song,
+    ];
+
+    let cancelled = false;
+
+    const checkAudioReady = () => {
+      if (cancelled) return;
+
+      const allReady = audios.every(
+        (audio) =>
+          audio.readyState >= 3
       );
 
-    duckSoundRef.current =
-      new Audio(
-        `${import.meta.env.BASE_URL}pato.mp3`
+      if (allReady) {
+        setAudioReady(true);
+      }
+    };
+
+    audios.forEach((audio) => {
+      audio.preload = "auto";
+
+      audio.addEventListener(
+        "canplay",
+        checkAudioReady
       );
 
-    songRef.current =
-      new Audio(
-        `${import.meta.env.BASE_URL}severa.mp3`
+      audio.addEventListener(
+        "canplaythrough",
+        checkAudioReady
       );
 
-    songRef.current.loop =
-      true;
+      audio.load();
+    });
 
-    songRef.current.volume =
-      0;
+    checkAudioReady();
 
     return () => {
+      cancelled = true;
+
+      audios.forEach((audio) => {
+        audio.removeEventListener(
+          "canplay",
+          checkAudioReady
+        );
+
+        audio.removeEventListener(
+          "canplaythrough",
+          checkAudioReady
+        );
+
+        audio.pause();
+      });
+
       if (songTimeoutRef.current) {
-        clearTimeout(
-          songTimeoutRef.current
-        );
+        clearTimeout(songTimeoutRef.current);
       }
 
-      if (
-        songFadeIntervalRef.current
-      ) {
-        clearInterval(
-          songFadeIntervalRef.current
-        );
+      if (songFadeIntervalRef.current) {
+        clearInterval(songFadeIntervalRef.current);
       }
-
-      targetSoundRef.current?.pause();
-
-      duckSoundRef.current?.pause();
-
-      songRef.current?.pause();
 
       if (songRef.current) {
-        songRef.current.currentTime =
-          0;
+        songRef.current.currentTime = 0;
       }
     };
   }, []);
+
 
   // =========================
   // SONIDO OBJETIVO
@@ -449,23 +551,32 @@ function Game() {
   // CRONÓMETRO
   // =========================
 
-  useEffect(() => {
-    if (gameOver) {
-      return;
-    }
+useEffect(() => {
+  if (
+    gameOver ||
+    !cameraReady ||
+    !detectorReady ||
+    !audioReady ||
+    showLoadingScreen
+  ) {
+    return;
+  }
 
-    const timer =
-      setInterval(() => {
-        setGameTime(
-          (previousTime) =>
-            previousTime + 1
-        );
-      }, 1000);
+  const timer = setInterval(() => {
+    setGameTime((previousTime) => previousTime + 1);
+  }, 1000);
 
-    return () => {
-      clearInterval(timer);
-    };
-  }, [gameOver]);
+  return () => {
+    clearInterval(timer);
+  };
+}, [
+  gameOver,
+  cameraReady,
+  detectorReady,
+  audioReady,
+  showLoadingScreen,
+]);
+
 
   // =========================
   // WEB WORKER + MEDIAPIPE
@@ -525,68 +636,68 @@ function Game() {
     // MENSAJES WORKER
     // =========================
 
-worker.onmessage = (event) => {
-  const data = event.data;
+    worker.onmessage = (event) => {
+      const data = event.data;
 
-  // DETECTOR LISTO
-  if (data.type === "READY") {
-    console.log("✅ Detector de manos listo en Web Worker");
-    setDetectorReady(true);
-    return;
-  }
+      // DETECTOR LISTO
+      if (data.type === "READY") {
+        console.log("✅ Detector de manos listo en Web Worker");
+        setDetectorReady(true);
+        return;
+      }
 
-  // RESULTADO DE LA DETECCIÓN
-  if (data.type === "RESULT") {
-    workerBusyRef.current = false;
+      // RESULTADO DE LA DETECCIÓN
+      if (data.type === "RESULT") {
+        workerBusyRef.current = false;
 
-    const stats = detectionStatsRef.current;
+        const stats = detectionStatsRef.current;
 
-    stats.count += 1;
-    stats.processing += data.processingTime ?? 0;
-    stats.capture += data.bitmapCreationTime ?? 0;
-    stats.roundTrip +=
-      performance.now() - (data.sentAt ?? performance.now());
+        stats.count += 1;
+        stats.processing += data.processingTime ?? 0;
+        stats.capture += data.bitmapCreationTime ?? 0;
+        stats.roundTrip +=
+          performance.now() - (data.sentAt ?? performance.now());
 
-    if (stats.count >= 10) {
+        if (stats.count >= 10) {
 
-      console.log("🔎 Diagnóstico de mano:", {
-  manosDetectadas: data.handCount,
-  puntaIndice: data.finger,
-  muñeca: data.wrist,
-  baseIndice: data.indexBase,
-});
-     console.log(
-  `📊 Rendimiento: ` +
-  `captura=${(stats.capture / stats.count).toFixed(1)} ms | ` +
-  `procesamiento=${(stats.processing / stats.count).toFixed(1)} ms | ` +
-  `total=${(stats.roundTrip / stats.count).toFixed(1)} ms`
-);
+          console.log("🔎 Diagnóstico de mano:", {
+            manosDetectadas: data.handCount,
+            puntaIndice: data.finger,
+            muñeca: data.wrist,
+            baseIndice: data.indexBase,
+          });
+          console.log(
+            `📊 Rendimiento: ` +
+            `captura=${(stats.capture / stats.count).toFixed(1)} ms | ` +
+            `procesamiento=${(stats.processing / stats.count).toFixed(1)} ms | ` +
+            `total=${(stats.roundTrip / stats.count).toFixed(1)} ms`
+          );
 
-      detectionStatsRef.current = {
-        count: 0,
-        processing: 0,
-        capture: 0,
-        roundTrip: 0,
-      };
-    }
+          detectionStatsRef.current = {
+            count: 0,
+            processing: 0,
+            capture: 0,
+            roundTrip: 0,
+          };
+        }
 
-    if (data.finger) {
-      fingerPositionRef.current = data.finger;
-      setFingerDetected(true);
-    } else {
-      fingerPositionRef.current = null;
-      setFingerDetected(false);
-    }
+        if (data.finger) {
+          fingerPositionRef.current = data.finger;
+          setFingerDetected(true);
+        } else {
+          fingerPositionRef.current = null;
+          setFingerDetected(false);
+        }
 
-    return;
-  }
+        return;
+      }
 
-  // ERROR DEL WORKER
-  if (data.type === "ERROR") {
-    workerBusyRef.current = false;
-    console.error("❌ MediaPipe Worker:", data.message);
-  }
-};
+      // ERROR DEL WORKER
+      if (data.type === "ERROR") {
+        workerBusyRef.current = false;
+        console.error("❌ MediaPipe Worker:", data.message);
+      }
+    };
     // =========================
     // ERROR DEL WORKER
     // =========================
@@ -656,12 +767,24 @@ worker.onmessage = (event) => {
           );
 
         if (videoRef.current) {
-          videoRef.current.srcObject =
-            stream;
+          videoRef.current.srcObject = stream;
 
-          videoRef.current
-            .play()
-            .catch(() => { });
+          try {
+            await videoRef.current.play();
+
+            if (videoRef.current.readyState >= 2) {
+              setCameraReady(true);
+            } else {
+              videoRef.current.onloadeddata = () => {
+                setCameraReady(true);
+              };
+            }
+          } catch (error) {
+            console.error(
+              "❌ No se pudo iniciar la reproducción de la cámara:",
+              error
+            );
+          }
         }
       } catch (error) {
         console.error(
@@ -700,12 +823,15 @@ worker.onmessage = (event) => {
     async function detectHand(
       timestamp
     ) {
+
       if (
         !videoRef.current ||
         !workerRef.current ||
         !detectorReady ||
+        showLoadingScreen ||
         gameOverRef.current
       ) {
+
         animationFrame =
           requestAnimationFrame(
             detectHand
@@ -793,7 +919,7 @@ worker.onmessage = (event) => {
         animationFrame
       );
     };
-  }, [detectorReady]);
+  }, [detectorReady, showLoadingScreen]);
 
   // =========================
   // GENERAR POSICIÓN OBJETIVO
@@ -987,7 +1113,8 @@ worker.onmessage = (event) => {
         );
 
       if (
-        !gameOverRef.current
+        !gameOverRef.current &&
+        cameraReadyRef.current
       ) {
         // =======================
         // PATO
@@ -997,7 +1124,7 @@ worker.onmessage = (event) => {
           duckStateRef.current;
 
         const speed =
-          2.0 +
+          1.0 +
           Math.floor(
             gameTimeRef.current /
             5
@@ -1007,7 +1134,7 @@ worker.onmessage = (event) => {
         const finalSpeed =
           Math.min(
             speed,
-            4.0
+            2.0
           );
 
         const movement =
@@ -1313,6 +1440,74 @@ worker.onmessage = (event) => {
 
           </div>
 
+        </div>
+      )}
+
+      {/* PANTALLA DE CARGA */}
+
+      {showLoadingScreen && (
+        <div
+          className={`loading-screen ${loadingFinishing ? "loading-finishing" : ""
+            }`}
+        >
+          <div className="loading-content">
+            <div className="loading-logo">
+              🦆
+            </div>
+
+            <h1 className="loading-title">
+              NO TOQUES
+              <br />
+              <span>AL PATO</span>
+            </h1>
+
+            <p className="loading-subtitle">
+              PREPARANDO LA PARTIDA
+            </p>
+
+            <div className="loading-progress-info">
+              <span>
+                {!cameraReady
+                  ? "Preparando cámara..."
+                  : !detectorReady
+                    ? "Cargando detector de manos..."
+                    : !audioReady
+                      ? "Cargando sonidos y música..."
+                      : "¡Todo listo!"}
+              </span>
+
+              <span>{loadingProgress}%</span>
+            </div>
+
+            <div
+              className="loading-progress-track"
+              role="progressbar"
+              aria-label="Carga del juego"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={loadingProgress}
+            >
+              <div
+                className="loading-progress-bar"
+                style={{
+                  width: `${loadingProgress}%`,
+                }}
+              />
+            </div>
+            <p className="loading-tip">
+              {!cameraReady
+                ? "Iniciando la cámara..."
+                : !detectorReady
+                  ? "Preparando el reconocimiento de manos..."
+                  : !audioReady
+                    ? "Preparando los sonidos del juego..."
+                    : "¡Prepárate para esquivar al pato!"}
+            </p>
+          </div>
+
+          <div className="loading-footer">
+            HECHO PARA LOS MÁS RÁPIDOS
+          </div>
         </div>
       )}
 
